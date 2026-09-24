@@ -18,6 +18,8 @@ from project_config import load_config
 from training_engine import _group_folds, generate_active_learning_plan
 from advanced_ml import optimize_budget
 from ad_targeting_map import planned_zones
+from experiment_protocol import build_experiment_plan
+from market_context import market_catalog, custom_market
 from model_quality import confidence_summary
 from ui import editing_enabled
 
@@ -107,6 +109,24 @@ class DataTests(unittest.TestCase):
         self.assertEqual(meta["geo_budget"] + meta["later_tests"] + meta["search_budget"] + meta["scale_reserve"], 500)
         confidence = confidence_summary({"unique_shows": 13, "repeated_shows": 13, "lead_min": 17}, {"mae": 17}, {"level": "E"})
         self.assertEqual(confidence["resolution_final"], "VERY LOW")
+
+    def test_all_market_presets_keep_budget_and_three_zones(self):
+        for name, market in market_catalog().items():
+            plan = build_experiment_plan(market)
+            self.assertEqual(plan["planned_spend_eur"].sum(), 240, name)
+            wave1 = plan[plan["wave"].eq("Geo + creative")]
+            self.assertEqual(wave1["area"].nunique(), 3, name)
+            self.assertEqual(len(wave1), 6, name)
+            self.assertTrue(wave1["city"].eq(market["label"]).all(), name)
+            zones, meta = planned_zones(market=market)
+            self.assertEqual(len(zones), 3, name)
+            self.assertAlmostEqual(float(zones["budget_eur"].sum()), 90.0, places=6)
+            self.assertEqual(meta["market_city"], market["label"])
+
+        custom = custom_market("Teststadt", 48.1, 11.5, 3.0)
+        plan = build_experiment_plan(custom)
+        self.assertEqual(plan[plan["wave"].eq("Geo + creative")]["area"].nunique(), 3)
+        self.assertTrue(plan["city"].eq("Teststadt").all())
 
     def test_no_sklearn_import_and_page_syntax(self):
         for path in [*Path(".").glob("*.py"), *Path("pages").glob("*.py")]:
