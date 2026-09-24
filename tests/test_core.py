@@ -14,7 +14,7 @@ from data_contracts import canonical_booking_id, clean_eso_snapshots
 from eso_baseline import fit_empirical_sales_curve
 from eso_sales_tracker import is_cookie_privacy_only, parse_available_seats, upsert_daily_snapshots
 from lightweight_ml import fit_bootstrap_ridge_ensemble, LightweightEnsemble
-from project_config import load_config
+from project_config import load_config, flat_context
 from training_engine import _group_folds, generate_active_learning_plan
 from advanced_ml import optimize_budget, per_show_forecast
 from ad_targeting_map import planned_zones
@@ -150,11 +150,8 @@ class DataTests(unittest.TestCase):
 
     def test_screening_forecast_is_differentiated_and_preserves_total(self):
         cfg = load_config()
-        flat = {
-            "show_dates": list(cfg["screenings"]["dates"]),
-            "capacity_per_show": int(cfg["venue"]["capacity_per_show"]),
-            "screening_forecast": cfg["screening_forecast"],
-        }
+        flat = flat_context(cfg)
+        self.assertIsInstance(flat.get("venue"), str)  # regression: hosted app uses this flattened shape
         sim = pd.DataFrame({"total_tickets": [196, 206, 216, 206, 206]})
         shows = per_show_forecast(sim, flat)
         self.assertEqual(len(shows), 4)
