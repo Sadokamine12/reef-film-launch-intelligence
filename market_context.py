@@ -6,6 +6,7 @@ The screening venue and ESO empirical demand baseline remain fixed in Garching.
 from __future__ import annotations
 
 from copy import deepcopy
+import math
 
 from project_config import load_config
 
@@ -167,3 +168,45 @@ def get_market(key: str | None = None, cfg: dict | None = None) -> dict:
 
 def market_area_names(market: dict) -> list[str]:
     return [str(z["area"]) for z in market.get("zones", [])]
+
+
+def distance_km(a_lat: float, a_lon: float, b_lat: float, b_lon: float) -> float:
+    """Great-circle distance in kilometres between two coordinates."""
+    r = 6371.0088
+    p1, p2 = math.radians(float(a_lat)), math.radians(float(b_lat))
+    dp = math.radians(float(b_lat) - float(a_lat))
+    dl = math.radians(float(b_lon) - float(a_lon))
+    h = math.sin(dp / 2) ** 2 + math.cos(p1) * math.cos(p2) * math.sin(dl / 2) ** 2
+    return 2 * r * math.asin(min(1.0, math.sqrt(h)))
+
+
+def market_prediction_context(market: dict, cfg: dict | None = None) -> dict:
+    """Return transparent pre-campaign factors for a selected ad market.
+
+    The factor is deliberately simple: distance to the fixed ESO venue reduces
+    the unverified ticket-conversion prior, while a direct U6-oriented preset
+    receives a small accessibility adjustment. It is a scenario prior, not a
+    learned city-performance score.
+    """
+    cfg = cfg or load_config()
+    venue = cfg.get("venue", {})
+    center = market.get("center", {})
+    km = distance_km(
+        float(center.get("lat", venue.get("lat", 48.259828))),
+        float(center.get("lon", venue.get("lon", 11.670136))),
+        float(venue.get("lat", 48.259828)),
+        float(venue.get("lon", 11.670136)),
+    )
+    # Smooth, conservative accessibility prior. The floor prevents distant
+    # markets from being treated as impossible before campaign evidence exists.
+    factor = 0.55 + 0.45 * math.exp(-km / 35.0)
+    if market.get("show_u6", False):
+        factor *= 1.05
+    factor = max(0.55, min(1.05, factor))
+    return {
+        "market": str(market.get("label", "Selected city")),
+        "distance_to_venue_km": round(km, 1),
+        "scenario_factor": float(factor),
+        "scenario_index": int(round(factor * 100)),
+        "basis": "Access-adjusted planning prior; not measured city performance",
+    }
