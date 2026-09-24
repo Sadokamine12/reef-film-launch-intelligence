@@ -9,6 +9,7 @@ from campaign_lab import attribution_readiness, campaign_summary
 from model_quality import confidence_summary, current_eso_model, eso_coverage
 from project_config import load_config, total_capacity
 from ad_targeting_map import planned_zones
+from market_context import market_catalog, market_prediction_context
 from ui import apply_theme, select_market, INK, MUTED, TEAL, BLUE
 
 
@@ -64,9 +65,15 @@ def main() -> None:
     coverage, eso_model = eso_coverage(), current_eso_model()
     attribution, campaign = attribution_readiness(), campaign_summary()
     confidence = confidence_summary(coverage, eso_model, attribution)
+    market_pred = market_prediction_context(market, cfg)
     no_paid_sim, _ = hybrid_simulation(0, model=model, cfg=flat, emp_stats=empirical, n=8000, market=market)
-    plan_sim, allocation = hybrid_simulation(cfg["marketing"]["total_budget_eur"], model=model, cfg=flat, emp_stats=empirical, n=8000, market=market)
-    no_paid, with_tests, lift = (interval(s) for s in (no_paid_sim["total_tickets"], plan_sim["total_tickets"], plan_sim["incremental_tickets"]))
+    first_wave_sim, first_wave_allocation = hybrid_simulation(90, model=model, cfg=flat, emp_stats=empirical, n=8000, market=market)
+    plan_sim, allocation = hybrid_simulation(cfg["marketing"]["experiment_budget_eur"], model=model, cfg=flat, emp_stats=empirical, n=8000, market=market)
+    no_paid = interval(no_paid_sim["total_tickets"])
+    first_wave_total = interval(first_wave_sim["total_tickets"])
+    first_wave_lift = interval(first_wave_sim["incremental_tickets"])
+    with_tests = interval(plan_sim["total_tickets"])
+    lift = interval(plan_sim["incremental_tickets"])
     planned_spend = int(allocation["budget_eur"].sum()) if not allocation.empty else 0
     reserve = int(cfg["marketing"]["total_budget_eur"] - planned_spend)
     p50 = float((plan_sim["total_tickets"] >= capacity*.5).mean())
@@ -79,20 +86,20 @@ def main() -> None:
     st.markdown(f'<span class="reef-pill reef-pill-amber">{booking_status}</span> &nbsp; <span class="reef-pill reef-pill-amber">ATTRIBUTION LEVEL {attribution["level"]}</span> &nbsp; <span class="reef-pill reef-pill-amber">PAID LIFT IS A SCENARIO</span>', unsafe_allow_html=True)
     st.markdown('<div style="height:16px"></div>', unsafe_allow_html=True)
 
-    left, right = st.columns([1.6, 1], gap="medium")
+    left, right = st.columns([1.45, 1], gap="medium")
     with left:
-        st.markdown(f'''<div class="reef-card"><div class="reef-label">Recommendation</div><h3>Prepare a small, balanced first test</h3>
-          <p>Target adults <b>20–60</b> in the three balanced test zones selected for <b>{market["label"]}</b>.</p>
-          <p><b>{", ".join(zones["area"].tolist())}</b></p>
-          <p>Test <b>SXSW proof</b> against <b>music + 360° experience</b> in each area. Six Meta cells, EUR 15 each. No measured winner exists yet.</p></div>''', unsafe_allow_html=True)
+        st.markdown(f'''<div class="reef-card"><div class="reef-label">Selected market prediction</div><h3>{market["label"]}</h3>
+          <p>Target adults <b>20–60</b> in <b>{", ".join(zones["area"].tolist())}</b>.</p>
+          <p><b>EUR 90 first wave:</b> predicted +{first_wave_lift[1]} tickets (low +{first_wave_lift[0]} · high +{first_wave_lift[2]}), for about <b>{first_wave_total[1]} total tickets</b>.</p>
+          <p><b>EUR {planned_spend} learning plan:</b> predicted +{lift[1]} tickets, for about <b>{with_tests[1]} total tickets</b>.</p></div>''', unsafe_allow_html=True)
     with right:
-        st.markdown('''<div class="reef-card"><div class="reef-label">Money and timing</div><div class="reef-number">EUR 0 now</div>
-          <p>Wait for public Resolution bookings. Record 48 hours of seat movement without paid ads.</p>
-          <p><b>Then:</b> EUR 90 first wave. Keep EUR 410 available for later decisions.</p></div>''', unsafe_allow_html=True)
-    st.markdown(f'<div class="reef-cta"><strong>Selected test market:</strong> {market["label"]}. <strong>Next decision:</strong> 48 hours after bookings open. Check actual sales pace, then start the EUR 90 test. Keep the EUR {reserve} scale reserve conditional.</div>', unsafe_allow_html=True)
+        st.markdown(f'''<div class="reef-card"><div class="reef-label">Market access prior</div><div class="reef-number">{market_pred["scenario_index"]}/100</div>
+          <p>{market_pred["distance_to_venue_km"]:.1f} km straight-line distance to ESO Supernova.</p>
+          <p>Used only to adjust the pre-campaign ticket-conversion scenario. It is <b>not measured city performance</b>.</p></div>''', unsafe_allow_html=True)
+    st.markdown(f'<div class="reef-cta"><strong>{market["label"]} scenario:</strong> EUR 90 first wave → +{first_wave_lift[1]} tickets; EUR {planned_spend} learning plan → +{lift[1]} tickets and about {with_tests[1]}/{capacity} total seats filled. Low/base/high total: {with_tests[0]} / {with_tests[1]} / {with_tests[2]}. <strong>Confidence remains low until real campaign and Resolution booking data arrive.</strong></div>', unsafe_allow_html=True)
 
     st.markdown('## Ticket outlook')
-    st.caption('Tickets across all four screenings. Low and high are scenario ranges, not calibrated prediction intervals. The paid case includes only the EUR 240 learning tests; the reserve stays unallocated.')
+    st.caption(f'Tickets across all four screenings. The selected-city paid scenario is access-adjusted using a transparent distance/transit prior. Low and high are scenario ranges, not calibrated prediction intervals. EUR {reserve} remains unallocated.')
     cols = st.columns(3, gap="medium")
     for col, html in zip(cols, [
         card('Without paid media', str(no_paid[1]), f'Low {no_paid[0]} · High {no_paid[2]} tickets', 'Empirical ESO baseline extrapolated to showtime'),
@@ -106,12 +113,52 @@ def main() -> None:
     with chart_col:
         st.markdown('### Baseline and test scenario')
         st.plotly_chart(forecast_chart(no_paid, with_tests, capacity), width="stretch", config={"displayModeBar": False})
-        st.caption('Dots mark the base estimate; horizontal lines show low to high. The paid difference is an unverified assumption.')
+        st.caption(f'Dots mark the base estimate; horizontal lines show low to high. Paid lift for {market["label"]} is an access-adjusted planning prediction, not measured campaign lift.')
     with facts_col:
         st.markdown('### Decision indicators')
         st.metric('Chance of 50% occupancy', f'{p50:.0%}')
         st.metric('Chance of 75% occupancy', f'{p75:.1%}')
         st.markdown(f'<div class="reef-card"><div class="reef-label">Evidence confidence</div><h3>{confidence["resolution_final"]}</h3><p>Final Resolution sales. Nearest comparable ESO observation: {coverage["lead_min"]:.0f} days before show.</p><p>Paid lift: <b>{confidence["paid_lift"]}</b></p></div>', unsafe_allow_html=True)
+
+    st.markdown('## Compare target-market predictions')
+    st.caption('Planning comparison only. Until campaign data exists, differences come from the transparent access prior (distance to ESO plus a small direct-U6 adjustment), not learned market performance.')
+    comparison_rows = []
+    for name, candidate in market_catalog(cfg).items():
+        candidate_meta = market_prediction_context(candidate, cfg)
+        candidate_wave, _ = hybrid_simulation(90, model=model, cfg=flat, emp_stats=empirical, n=2500, seed=73, market=candidate)
+        candidate_plan, _ = hybrid_simulation(cfg["marketing"]["experiment_budget_eur"], model=model, cfg=flat, emp_stats=empirical, n=2500, seed=73, market=candidate)
+        comparison_rows.append({
+            "Market": name,
+            "Distance to ESO (km)": candidate_meta["distance_to_venue_km"],
+            "Access prior": candidate_meta["scenario_index"],
+            "EUR 90 predicted extra": int(round(candidate_wave["incremental_tickets"].median())),
+            f"EUR {int(cfg['marketing']['experiment_budget_eur'])} predicted extra": int(round(candidate_plan["incremental_tickets"].median())),
+            "Predicted total tickets": int(round(candidate_plan["total_tickets"].median())),
+            "P(50% occupancy)": float((candidate_plan["total_tickets"] >= capacity*.5).mean()),
+        })
+    import pandas as pd
+    comparison_df = pd.DataFrame(comparison_rows)
+    comparison_df["Selected"] = comparison_df["Market"].eq(market["label"]).map({True: "●", False: ""})
+    display_cols = ["Selected", "Market", "Distance to ESO (km)", "Access prior", "EUR 90 predicted extra", f"EUR {int(cfg['marketing']['experiment_budget_eur'])} predicted extra", "Predicted total tickets", "P(50% occupancy)"]
+    st.dataframe(
+        comparison_df[display_cols].style.format({"Distance to ESO (km)": "{:.1f}", "P(50% occupancy)": "{:.0%}"}),
+        hide_index=True, width="stretch",
+    )
+
+    fig = go.Figure()
+    fig.add_trace(go.Bar(
+        x=comparison_df["Market"],
+        y=comparison_df["EUR 90 predicted extra"],
+        text=comparison_df["EUR 90 predicted extra"],
+        textposition="outside",
+        name="Predicted extra tickets from EUR 90",
+    ))
+    fig.update_layout(
+        height=340, showlegend=False, xaxis_title="", yaxis_title="Scenario incremental tickets",
+        plot_bgcolor="white", paper_bgcolor="white", margin=dict(l=40, r=20, t=20, b=80),
+        font=dict(color=INK),
+    )
+    st.plotly_chart(fig, width="stretch", config={"displayModeBar": False})
 
     st.markdown('## Four Tuesdays')
     st.caption('No screening has a measured advantage. The current planning case divides the series evenly.')
@@ -134,7 +181,7 @@ def main() -> None:
         st.markdown(f'''- **ESO evidence:** {coverage['rows']} booking snapshots from {coverage['unique_shows']} shows. The nearest observation is {coverage['lead_min']:.0f} days before show.
 - **Demand model:** grouped MAE {float(eso_model.get('mae') or 0):.1f} occupancy points. It fails the operational gate, so the empirical curve is used.
 - **Marketing evidence:** {campaign['rows']} campaign observations; attribution level {attribution['level']}.
-- **Planning assumption:** EUR 0.85 per click and 0.045 additional tickets per click, held equal across audiences and creatives. These values are not learned from campaign results.
+- **Planning assumption:** EUR 0.85 per click and 0.045 additional tickets per click. Before city-level evidence exists, this is adjusted by a transparent access factor based on distance to ESO and a small direct-U6 accessibility adjustment. It is not learned city performance.
 - **Biggest risk:** no Resolution booking inventory and no comparable observations close to showtime.''')
 
     st.markdown('### Explore the details')
