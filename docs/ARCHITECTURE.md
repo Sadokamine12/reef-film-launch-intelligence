@@ -12,3 +12,8 @@ The doctor reports blocking integrity problems as FAIL and unavailable future ev
 ## Target-market selection
 
 `market_context.py` defines paid-media market presets and neutral custom-city zones. Streamlit stores the boss's current market choice in session state. The selected market changes experiment geography, map centres, campaign tagging and planning allocation labels. It does **not** change the ESO Supernova venue, capacity, screening dates, or empirical demand baseline. Campaign rows include a `city` field so engagement and later controlled-lift models can learn cross-city effects once enough real observations exist.
+
+
+## Pre-campaign city prediction
+
+Before controlled campaign evidence exists, city selection affects the paid-media planning prior through a transparent accessibility factor implemented in `market_context.market_prediction_context`. It uses straight-line distance from the selected market centre to the fixed ESO venue, with a small adjustment for presets explicitly built around direct U6 access. The factor is bounded and applies only to the pre-campaign ticket-conversion prior. It never changes the empirical ESO no-paid baseline and is replaced/anchored by real campaign modelling once controlled evidence becomes operational.
