@@ -57,4 +57,9 @@ No credentials are stored. The project uses only public ESO pages until campaign
 
 The dashboard distinguishes **actual**, **empirical fitted**, **learned ML**, and **scenario** claims. The four Tuesday cards are no longer an artificial equal split: before Resolution-specific sales exist, they use a transparent calendar + campaign-maturity planning prior (indices 96 / 92 / 108 / 104) that preserves the total forecast. The published calendar facts come from the Bavarian school-holiday calendar and TUM/LMU semester dates; the direction and magnitude of the weights remain modelling assumptions until live sales replace them. See `CHANGELOG.md` for changes in this revision.
 
-The first page is a decision brief. It shows the current spend decision, no-paid and test scenarios, the main uncertainty, and the next decision trigger. The sidebar leads to Sales Forecast, Ad Targeting Map, Campaign Experiment, Budget Scenarios, Campaign Data, Model Quality, Data Health, and Evidence Methodology. Technical details and raw rows sit in expanders on the relevant pages.
+The first page is a decision brief. It shows the current spend decision, no-paid and test scenarios, the main uncertainty, and the next decision trigger. A dedicated **Decision Simulator** lets management choose a target market, budget ceiling, and campaign start timing and immediately see low/base/high tickets, scenario lift, occupancy probabilities, screening-by-screening outlook, and a same-budget market comparison. Manager-facing accessibility is shown as HIGH / MEDIUM / LOW instead of a pseudo-precise score. The sidebar also leads to Sales Forecast, Ad Targeting Map, Campaign Experiment, Budget Scenarios, Campaign Data, Model Quality, Data Health, and Evidence Methodology. Technical details and raw rows sit in expanders on the relevant pages.
+
+
+## Market evidence inputs
+
+`data/market_evidence.csv` is the controlled input template for adult population, typical travel time, Meta reachable audience, Google search demand, and ESO visitor-origin share. Missing values stay blank and are shown as NOT CONNECTED in the Decision Simulator; the app does not invent them.
