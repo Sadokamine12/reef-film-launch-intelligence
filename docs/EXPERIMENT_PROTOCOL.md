@@ -26,11 +26,7 @@ If the launch timetable makes a clean baseline impossible, mark that limitation 
 
 Broad age 20–60 to avoid fragmenting a small budget.
 
-Test three geographies:
-
-- ESO / Forschungszentrum
-- Garching / Hochbrück
-- Universität / Schwabing
+Choose the target market city in the dashboard. Wave 1 then uses three balanced zones from that city. The default Garching / Munich North preset uses ESO / Forschungszentrum, Garching / Hochbrück, and Universität / Schwabing. Other presets generate their own three local zones; custom city mode uses a neutral centre/north/south layout until real performance data exists.
 
 Test two creatives:
 
