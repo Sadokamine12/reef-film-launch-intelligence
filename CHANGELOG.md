@@ -1,3 +1,11 @@
+## Professional screening-by-screening forecast
+
+- Replaced the 52 / 52 / 52 / 52 equal split with a transparent per-screening scenario model.
+- Added Tuesday planning indices 96 / 92 / 108 / 104, which preserve the four-show total while creating differentiated low/base/high forecasts.
+- Added a professional Tuesday bar chart with uncertainty, occupancy, scenario index and driver text.
+- Added official Bavaria/TUM/LMU calendar context and kept the directional effects explicitly labelled as modelling assumptions.
+- Updated Budget Scenarios, Project Doctor and tests to validate the screening-level forecast.
+
 ## Immediate city-specific predictions
 
 - Selecting a target market now changes the paid-media scenario numerically instead of only changing labels and map zones.
