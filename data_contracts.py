@@ -13,8 +13,8 @@ ESO_SNAPSHOT_COLUMNS = [
 
 CAMPAIGN_COLUMNS = [
     "observation_id", "date", "show_date", "days_to_event", "experiment_wave", "control_group",
-    "channel", "city", "area", "age_band", "creative", "spend_eur", "impressions", "video_views_75",
-    "clicks", "landing_page_views", "tickets_attributed", "incremental_tickets_estimate",
+    "channel", "city", "area", "age_band", "creative", "source_platform", "spend_eur", "impressions", "reach", "video_views_75",
+    "clicks", "landing_page_views", "platform_purchases", "platform_purchase_value", "tickets_attributed", "incremental_tickets_estimate",
     "label_source", "attribution_level", "campaign_id", "adset_id", "test_id", "utm_campaign",
     "utm_content", "notes",
 ]
