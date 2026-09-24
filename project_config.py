@@ -30,6 +30,38 @@ DEFAULT_CONFIG = {
         "time": "19:00",
         "timezone": "Europe/Berlin",
     },
+    "screening_forecast": {
+        "method": "calendar_campaign_prior_v1",
+        "status": "scenario prior; not measured Tuesday performance",
+        "note": "Used only to distribute the four-show planning forecast before Resolution-specific sales exist. Weights are transparent modelling assumptions informed by published calendar context and campaign maturity.",
+        "sources": {
+            "bavaria_school_holidays": "https://www.km.bayern.de/termine/ferien-und-feiertage",
+            "tum_semester_dates": "https://www.tum.de/studium/bewerbung/infoportal-bewerbung/termine-und-fristen",
+            "lmu_lecture_dates": "https://www.lmu.de/de/workspace-fuer-studierende/1x1-des-studiums/vorlesungszeiten/",
+        },
+        "shows": {
+            "2027-02-02": {
+                "weight": 0.96,
+                "calendar_fact": "TUM and LMU winter lecture periods are still running through 5 February 2027.",
+                "scenario_driver": "Opening screening: local campus presence helps, but campaign awareness and word-of-mouth have had the least time to mature.",
+            },
+            "2027-02-09": {
+                "weight": 0.92,
+                "calendar_fact": "Bavaria spring school holidays run 8–12 February 2027; TUM and LMU are already lecture-free.",
+                "scenario_driver": "Holiday and lower campus presence are treated as a downside risk for this adult local-access campaign.",
+            },
+            "2027-02-16": {
+                "weight": 1.08,
+                "calendar_fact": "The Bavarian spring school holiday has ended; TUM and LMU remain lecture-free.",
+                "scenario_driver": "Post-holiday week with a more mature campaign and retargeting pool is treated as the strongest planning week.",
+            },
+            "2027-02-23": {
+                "weight": 1.04,
+                "calendar_fact": "TUM and LMU remain lecture-free.",
+                "scenario_driver": "Final screening combines mature remarketing and last-chance urgency, partly offset by late-run fatigue.",
+            },
+        },
+    },
     "marketing": {
         "total_budget_eur": 500,
         "experiment_budget_eur": 240,
@@ -109,6 +141,7 @@ def flat_context(cfg: dict | None = None) -> dict:
         "venue": cfg["venue"]["name"],
         "capacity_per_show": int(cfg["venue"]["capacity_per_show"]),
         "show_dates": list(cfg["screenings"]["dates"]),
+        "screening_forecast": deepcopy(cfg.get("screening_forecast", {})),
         "budget_eur": float(cfg["marketing"]["total_budget_eur"]),
         "target_age_min": int(cfg["film"]["target_age_min"]),
         "target_age_max": int(cfg["film"]["target_age_max"]),
