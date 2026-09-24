@@ -22,7 +22,7 @@ def validate_campaign_rows(df: pd.DataFrame) -> list[str]:
             errors.append(f"{field} has blank values")
     if pd.to_datetime(df["date"], errors="coerce").isna().any():
         errors.append("date contains invalid values")
-    for field in ("spend_eur", "impressions", "clicks", "video_views_75", "landing_page_views", "tickets_attributed", "incremental_tickets_estimate"):
+    for field in ("spend_eur", "impressions", "reach", "clicks", "video_views_75", "landing_page_views", "platform_purchases", "platform_purchase_value", "tickets_attributed", "incremental_tickets_estimate"):
         if field not in df:
             continue
         values = pd.to_numeric(df[field].replace("", pd.NA), errors="coerce")
@@ -93,8 +93,10 @@ def import_campaign_csv(uploaded_df: pd.DataFrame, path: str | Path = CAMPAIGN_P
         "impressions": "impressions", "link clicks": "clicks", "clicks (all)": "clicks",
         "views_75": "video_views_75", "video_75": "video_views_75", "video plays at 75%": "video_views_75",
         "landing_views": "landing_page_views", "lpv": "landing_page_views", "landing page views": "landing_page_views",
+        "reach": "reach", "purchases": "platform_purchases", "website purchases": "platform_purchases",
+        "purchase conversion value": "platform_purchase_value", "website purchases conversion value": "platform_purchase_value",
         "tickets": "tickets_attributed", "city": "city", "market": "city", "geo": "area", "audience": "age_band", "ad set id": "adset_id",
-        "campaign id": "campaign_id", "ad name": "creative", "ad set name": "area",
+        "campaign id": "campaign_id", "ad name": "creative", "ad set name": "area", "source platform": "source_platform",
     }
     rename = {}
     for c in df.columns:
@@ -110,7 +112,7 @@ def import_campaign_csv(uploaded_df: pd.DataFrame, path: str | Path = CAMPAIGN_P
 
 def campaign_summary(path: str | Path = CAMPAIGN_PATH) -> dict:
     df = _read(path)
-    numeric = ["spend_eur", "impressions", "video_views_75", "clicks", "landing_page_views", "tickets_attributed", "incremental_tickets_estimate"]
+    numeric = ["spend_eur", "impressions", "reach", "video_views_75", "clicks", "landing_page_views", "platform_purchases", "platform_purchase_value", "tickets_attributed", "incremental_tickets_estimate"]
     for c in numeric:
         df[c] = pd.to_numeric(df[c], errors="coerce")
     verified_sources = VERIFIED_SOURCES
