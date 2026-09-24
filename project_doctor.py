@@ -15,6 +15,7 @@ from model_quality import load_status
 from project_config import load_config, total_capacity
 from market_context import market_catalog
 from experiment_protocol import build_experiment_plan
+from external_sources import load_external_source_status
 
 
 def run_checks() -> list[dict]:
@@ -66,6 +67,17 @@ def run_checks() -> list[dict]:
             connected_values += int(market_evidence[field].notna().sum())
         sourced_public_rows = int((market_evidence["population_source"].fillna("").ne("") & market_evidence["travel_source"].fillna("").ne("")).sum())
     add("Market evidence inputs", market_schema_ok and sourced_public_rows >= 6, f"{connected_values} values connected; {sourced_public_rows} markets have population + transit sources; paid-platform fields may remain blank", "warning")
+    external = load_external_source_status()
+    meta = external.get("meta_ads", {})
+    google = external.get("google_ads", {})
+    eso_live = external.get("eso_resolution", {})
+    external_schema_ok = all(k in external for k in ["meta_ads", "google_ads", "eso_resolution"])
+    live_ready_count = sum([
+        bool(meta.get("confirmed_reef_account")) and int(meta.get("usable_rows_last_2_years", 0) or 0) > 0,
+        bool(google.get("connected_account_present")),
+        int(eso_live.get("public_booking_urls_found", 0) or 0) >= int(eso_live.get("expected_booking_urls", 4) or 4),
+    ])
+    add("External live sources", external_schema_ok, f"{live_ready_count}/3 live sources ready; absent sources remain warnings, not fabricated data", "warning")
     folders = ["config", "data", "models", "pages", "docs"]
     add("Folders", all(Path(p).is_dir() for p in folders), ", ".join(folders))
 

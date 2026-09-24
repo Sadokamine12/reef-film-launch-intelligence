@@ -40,7 +40,7 @@ The precommitted learning plan totals EUR 240: EUR 90 for three geographies × t
 ## Required external inputs
 
 - Four public ESO booking URLs, one for each screening, once ESO publishes them. Add each URL to `tracking.resolution_booking_urls` in `config/project.json`.
-- Actual Meta/Google daily exports with date, area, age band, creative, spend, impressions, and clicks. The Campaign Training Lab supports explicit column mapping.
+- Actual Meta/Google daily exports with date, area, age band, creative, spend, impressions, and clicks. The Campaign Training Lab supports explicit column mapping. Live connection status and authorization guidance are documented in docs/LIVE_DATA_CONNECTIONS.md.
 - A defensible incremental design or label before ticket-lift ML can run. ESO purchase source reports, source codes, or reliable conversion events support tracked purchases; controlled holdout/staggered tests are needed to establish *incremental* lift. Aggregate seats alone can support only an uncertain overall campaign comparison.
 
 No credentials are stored. The project uses only public ESO pages until campaign data is imported.
@@ -53,7 +53,7 @@ No credentials are stored. The project uses only public ESO pages until campaign
 - `data/campaign_history.csv`: campaign observations with provenance fields.
 - `models/*.json`: portable NumPy model artefacts.
 - `pages/`: Streamlit drill-down pages.
-- `docs/ARCHITECTURE.md`, `docs/OPERATIONS.md`, `docs/MODEL_CARD.md`, `docs/DATA_DICTIONARY.md`, `docs/EXPERIMENT_PROTOCOL.md`, `docs/PROJECT_PLAN.md`: methods and operations.
+- `docs/ARCHITECTURE.md`, `docs/OPERATIONS.md`, `docs/MODEL_CARD.md`, `docs/DATA_DICTIONARY.md`, `docs/EXPERIMENT_PROTOCOL.md`, `docs/PROJECT_PLAN.md`, `docs/LIVE_DATA_CONNECTIONS.md`: methods, operations, and live-source connection state.
 
 The dashboard distinguishes **actual**, **empirical fitted**, **learned ML**, and **scenario** claims. The four Tuesday cards are no longer an artificial equal split: before Resolution-specific sales exist, they use a transparent calendar + campaign-maturity planning prior (indices 96 / 92 / 108 / 104) that preserves the total forecast. The published calendar facts come from the Bavarian school-holiday calendar and TUM/LMU semester dates; the direction and magnitude of the weights remain modelling assumptions until live sales replace them. See `CHANGELOG.md` for changes in this revision.
 

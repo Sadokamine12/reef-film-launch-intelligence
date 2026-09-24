@@ -19,6 +19,7 @@ from training_engine import _group_folds, generate_active_learning_plan
 from advanced_ml import optimize_budget, per_show_forecast
 from ad_targeting_map import planned_zones
 from experiment_protocol import build_experiment_plan
+from external_sources import load_external_source_status, source_readiness_rows
 from market_context import market_catalog, custom_market, market_prediction_context
 from model_quality import confidence_summary
 from ui import editing_enabled
@@ -178,6 +179,16 @@ class DataTests(unittest.TestCase):
         freising = market_prediction_context(markets["Freising"])
         self.assertEqual(round(float(freising["public_transport_min"])), 23)
         self.assertEqual(freising["working_age_population_20_64"], 32084)
+
+    def test_external_source_readiness_is_explicit(self):
+        status = load_external_source_status()
+        self.assertEqual(set(status), {"checked_at", "meta_ads", "google_ads", "eso_resolution"})
+        rows = source_readiness_rows(status)
+        self.assertEqual({r["Source"] for r in rows}, {"Meta Ads", "Google Ads", "ESO Resolution bookings"})
+        self.assertFalse(next(r for r in rows if r["Source"] == "Meta Ads")["Ready"])
+        self.assertFalse(next(r for r in rows if r["Source"] == "Google Ads")["Ready"])
+        self.assertFalse(next(r for r in rows if r["Source"] == "ESO Resolution bookings")["Ready"])
+        self.assertEqual(status["eso_resolution"]["public_booking_urls_found"], 0)
 
     def test_no_sklearn_import_and_page_syntax(self):
         for path in [*Path(".").glob("*.py"), *Path("pages").glob("*.py")]:

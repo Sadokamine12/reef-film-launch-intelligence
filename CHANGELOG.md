@@ -1,3 +1,12 @@
+## Live Meta / Google / ESO source readiness
+
+- Added explicit external-source status for Meta Ads, Google Ads and the four Resolution booking URLs.
+- Verified the currently connected Meta Ads account returns zero reporting rows over the last two years and is not confirmed as the REEF account, so no data was imported.
+- Recorded Google Ads as not connected rather than fabricating search data.
+- Recorded 0/4 public Resolution booking URLs and added a future publication watch outside the repo.
+- Added Data Health and Decision Simulator readiness tables plus Project Doctor and unit-test coverage.
+- Added docs/LIVE_DATA_CONNECTIONS.md with OAuth authorization links and a no-secrets rule.
+
 ## Sourced market evidence layer
 
 - Populated all seven preset markets with public demographic context and public-transport evidence, including provenance URLs and method/year notes.
