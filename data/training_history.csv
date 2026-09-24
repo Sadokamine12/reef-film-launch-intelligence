@@ -1,34 +1,34 @@
 trained_at_utc,model,status,rows,target,mae,r2,model_path,benchmark_mae,benchmark_r2,validation_mode,operational,mae_seats,rmse_pp
-2026-09-24T07:20:03.121757+00:00,ESO demand model,trained,28,sold_pct,10.161005940362116,0.6282069227882353,models\eso_demand_lightweight.json,,,,,,
+2026-09-24T07:20:03.121757+00:00,ESO demand model,trained,28,sold_pct,10.161005940362116,0.6282069227882353,models/eso_demand_lightweight.json,,,,,,
 2026-09-24T07:20:03.121757+00:00,Engagement-response model,waiting,0,,,,,,,,,,
 2026-09-24T07:20:03.121757+00:00,Ticket-lift model,waiting,0,,,,,,,,,,
-2026-09-24T07:25:59.741095+00:00,ESO demand model,trained,28,sold_pct,19.80172988203604,-0.3505010316366459,models\eso_demand_lightweight.json,,,,,,
+2026-09-24T07:25:59.741095+00:00,ESO demand model,trained,28,sold_pct,19.80172988203604,-0.3505010316366459,models/eso_demand_lightweight.json,,,,,,
 2026-09-24T07:25:59.741095+00:00,Engagement-response model,waiting,0,,,,,,,,,,
 2026-09-24T07:25:59.741095+00:00,Ticket-lift model,waiting,0,,,,,,,,,,
 2026-09-24T07:48:58.909138+00:00,ESO demand model,trained_low_confidence,26,sold_pct,17.449609220066673,0.3840140156614107,models/eso_demand_lightweight.json,20.22627494045984,-0.2137859160836086,grouped CV,False,,
 2026-09-24T07:48:58.909138+00:00,Engagement-response model,waiting,0,,,,,,,,False,,
 2026-09-24T07:48:58.909138+00:00,Ticket-lift model,waiting,0,,,,,,,,False,,
-2026-09-24T08:05:34.204025+00:00,ESO demand model,trained_low_confidence,26,sold_pct,17.44960922006645,0.384014015661418,models\eso_demand_lightweight.json,20.22627494045984,-0.2137859160836086,grouped CV,False,,
+2026-09-24T08:05:34.204025+00:00,ESO demand model,trained_low_confidence,26,sold_pct,17.44960922006645,0.384014015661418,models/eso_demand_lightweight.json,20.22627494045984,-0.2137859160836086,grouped CV,False,,
 2026-09-24T08:05:34.204025+00:00,Engagement-response model,waiting,0,,,,,,,,False,,
 2026-09-24T08:05:34.204025+00:00,Ticket-lift model,waiting,0,,,,,,,,False,,
-2026-09-24T08:09:40.033415+00:00,ESO demand model,trained_low_confidence,26,sold_pct,17.44960922006645,0.384014015661418,models\eso_demand_lightweight.json,20.22627494045984,-0.2137859160836086,grouped CV,False,,
+2026-09-24T08:09:40.033415+00:00,ESO demand model,trained_low_confidence,26,sold_pct,17.44960922006645,0.384014015661418,models/eso_demand_lightweight.json,20.22627494045984,-0.2137859160836086,grouped CV,False,,
 2026-09-24T08:09:40.033415+00:00,Engagement-response model,waiting,0,,,,,,,,False,,
 2026-09-24T08:09:40.033415+00:00,Ticket-lift model,waiting,0,,,,,,,,False,,
-2026-09-24T08:11:48.675521+00:00,ESO demand model,trained_low_confidence,26,sold_pct,16.946195533964264,0.4096432193085255,models\eso_demand_lightweight.json,19.76744497563129,-0.2043787100504261,grouped CV,False,,
+2026-09-24T08:11:48.675521+00:00,ESO demand model,trained_low_confidence,26,sold_pct,16.946195533964264,0.4096432193085255,models/eso_demand_lightweight.json,19.76744497563129,-0.2043787100504261,grouped CV,False,,
 2026-09-24T08:11:48.675521+00:00,Engagement-response model,waiting,0,,,,,,,,False,,
 2026-09-24T08:11:48.675521+00:00,Ticket-lift model,waiting,0,,,,,,,,False,,
-2026-09-24T08:21:01.248926+00:00,ESO demand model,trained_low_confidence,26,sold_pct,16.946195533964264,0.4096432193085255,models\eso_demand_lightweight.json,19.26146659738756,-0.191452202813481,grouped CV,False,18.47135313202105,18.313736265414025
+2026-09-24T08:21:01.248926+00:00,ESO demand model,trained_low_confidence,26,sold_pct,16.946195533964264,0.4096432193085255,models/eso_demand_lightweight.json,19.26146659738756,-0.191452202813481,grouped CV,False,18.47135313202105,18.313736265414025
 2026-09-24T08:21:01.248926+00:00,Engagement-response model,waiting,0,,,,,,,,False,,
 2026-09-24T08:21:01.248926+00:00,Ticket-lift model,waiting,0,,,,,,,,False,,
-2026-09-24T08:26:24.562380+00:00,ESO demand model,trained_low_confidence,26,sold_pct,17.02986431167702,0.4089909836035358,models\eso_demand_lightweight.json,19.31405603335737,-0.1939979025121407,grouped CV,False,18.562552099727952,18.35636975125559
+2026-09-24T08:26:24.562380+00:00,ESO demand model,trained_low_confidence,26,sold_pct,17.02986431167702,0.4089909836035358,models/eso_demand_lightweight.json,19.31405603335737,-0.1939979025121407,grouped CV,False,18.562552099727952,18.35636975125559
 2026-09-24T08:26:24.562380+00:00,Engagement-response model,waiting,0,,,,,,,,False,,
 2026-09-24T08:26:24.562380+00:00,Ticket-lift model,waiting,0,,,,,,,,False,,
-2026-09-24T08:27:38.898156+00:00,ESO demand model,trained_low_confidence,26,sold_pct,17.02986431167702,0.4089909836035358,models\eso_demand_lightweight.json,19.31405603335737,-0.1939979025121407,grouped CV,False,18.562552099727952,18.35636975125559
+2026-09-24T08:27:38.898156+00:00,ESO demand model,trained_low_confidence,26,sold_pct,17.02986431167702,0.4089909836035358,models/eso_demand_lightweight.json,19.31405603335737,-0.1939979025121407,grouped CV,False,18.562552099727952,18.35636975125559
 2026-09-24T08:27:38.898156+00:00,Engagement-response model,waiting,0,,,,,,,,False,,
 2026-09-24T08:27:38.898156+00:00,Ticket-lift model,waiting,0,,,,,,,,False,,
-2026-09-24T08:32:21.657267+00:00,ESO demand model,trained_low_confidence,26,sold_pct,17.02986431167702,0.4089909836035358,models\eso_demand_lightweight.json,19.314056033357375,-0.1939979025121407,grouped CV,False,18.562552099727952,18.35636975125559
+2026-09-24T08:32:21.657267+00:00,ESO demand model,trained_low_confidence,26,sold_pct,17.02986431167702,0.4089909836035358,models/eso_demand_lightweight.json,19.314056033357375,-0.1939979025121407,grouped CV,False,18.562552099727952,18.35636975125559
 2026-09-24T08:32:21.657267+00:00,Engagement-response model,waiting,0,,,,,,,,False,,
 2026-09-24T08:32:21.657267+00:00,Ticket-lift model,waiting,0,,,,,,,,False,,
-2026-09-24T08:38:26.008460+00:00,ESO demand model,trained_low_confidence,26,sold_pct,17.02986431167702,0.4089909836035358,models\eso_demand_lightweight.json,19.314056033357378,-0.19399790251214077,grouped CV,False,18.562552099727952,18.35636975125559
+2026-09-24T08:38:26.008460+00:00,ESO demand model,trained_low_confidence,26,sold_pct,17.02986431167702,0.4089909836035358,models/eso_demand_lightweight.json,19.314056033357378,-0.19399790251214077,grouped CV,False,18.562552099727952,18.35636975125559
 2026-09-24T08:38:26.008460+00:00,Engagement-response model,waiting,0,,,,,,,,False,,
 2026-09-24T08:38:26.008460+00:00,Ticket-lift model,waiting,0,,,,,,,,False,,
