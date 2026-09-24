@@ -1,65 +1,14 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Dict, Iterable, Tuple
+from typing import Dict, Tuple
 import math
+
 import pandas as pd
 
-# Planning pins for the Resolution @ ESO campaign.
-# ESO coordinates are the venue's published GPS position.
-# Other pins are planning centres for ad-radius tests, not venue addresses.
-DEFAULT_ZONES = [
-    {
-        "area": "ESO / Forschungszentrum",
-        "lat": 48.259828,
-        "lon": 11.670136,
-        "radius_km": 2.5,
-        "priority_score": 100,
-        "test_weight": 0.40,
-        "age": "20–60",
-        "role": "Primary",
-        "why": "Venue + research campus + immediate catchment",
-        "creative": "SXSW proof + immersive dome experience",
-    },
-    {
-        "area": "Garching / Hochbrück",
-        "lat": 48.247326,
-        "lon": 11.631008,
-        "radius_km": 2.5,
-        "priority_score": 89,
-        "test_weight": 0.225,
-        "age": "25–60",
-        "role": "Local",
-        "why": "Close to ESO; local residents, workers and U6 access",
-        "creative": "Four Tuesday nights + easy local access",
-    },
-    {
-        "area": "Studentenstadt / Freimann",
-        "lat": 48.183522,
-        "lon": 11.607710,
-        "radius_km": 2.5,
-        "priority_score": 84,
-        "test_weight": 0.20,
-        "age": "20–39",
-        "role": "U6",
-        "why": "Direct U6 corridor; younger culture/experience audience",
-        "creative": "Music + 360° visual experience",
-    },
-    {
-        "area": "Universität / Schwabing",
-        "lat": 48.150850,
-        "lon": 11.580250,
-        "radius_km": 2.5,
-        "priority_score": 80,
-        "test_weight": 0.175,
-        "age": "20–49",
-        "role": "Culture",
-        "why": "University, culture and music audience on the same U6 line",
-        "creative": "Award-winning immersive music event",
-    },
-]
+from market_context import get_market
 
-# Key U6 nodes used only to explain the travel corridor visually.
+# U6 nodes are used only when the selected market uses the U6 corridor.
 U6_PATH = [
     {"name": "Universität", "lat": 48.150850, "lon": 11.580250},
     {"name": "Münchner Freiheit", "lat": 48.161345, "lon": 11.586414},
@@ -73,34 +22,58 @@ U6_PATH = [
 
 def _normalise_weights(zones: pd.DataFrame) -> pd.DataFrame:
     out = zones.copy()
+    if "test_weight" not in out:
+        out["test_weight"] = 1.0
     total = pd.to_numeric(out["test_weight"], errors="coerce").fillna(0).sum()
-    if total <= 0:
-        out["test_weight"] = 1 / max(1, len(out))
-    else:
-        out["test_weight"] = out["test_weight"] / total
+    out["test_weight"] = (1 / max(1, len(out))) if total <= 0 else out["test_weight"] / total
     return out
 
 
-def planned_zones(total_budget: float = 500, validation_budget: float = 240, search_budget: float = 40) -> Tuple[pd.DataFrame, Dict[str, float]]:
-    """Show the actual first-wave geography spend from the locked experiment plan."""
+def planned_zones(
+    total_budget: float = 500,
+    validation_budget: float = 240,
+    search_budget: float = 40,
+    market: dict | None = None,
+) -> Tuple[pd.DataFrame, Dict[str, float]]:
+    """Return the selected city's balanced first-wave zones.
+
+    Geography is a test choice, not a learned success probability. The first wave
+    always spends EUR 90 across three zones (EUR 30/zone, split across two
+    creatives in the experiment page).
+    """
+    market = market or get_market()
     total_budget = max(0.0, float(total_budget))
     validation_budget = min(max(0.0, float(validation_budget)), total_budget)
     search_budget = min(max(0.0, float(search_budget)), validation_budget)
-    geo_budget = min(max(0.0, validation_budget - search_budget), validation_budget * 90 / 240)
+    geo_budget = min(90.0, validation_budget)
     later_tests = max(0.0, validation_budget - search_budget - geo_budget)
     scale_reserve = max(0.0, total_budget - validation_budget)
 
-    zones = _normalise_weights(pd.DataFrame(DEFAULT_ZONES))
-    shares = {"ESO / Forschungszentrum": 1/3, "Garching / Hochbrück": 1/3, "Universität / Schwabing": 1/3}
-    zones["budget_eur"] = zones["area"].map(shares).fillna(0).mul(geo_budget).round(0).astype(int)
-    # Preserve the exact geo total after rounding.
-    delta = int(round(geo_budget - zones["budget_eur"].sum()))
-    if delta and len(zones):
-        zones.loc[zones.index[0], "budget_eur"] += delta
-    zones["radius_m"] = (zones["radius_km"] * 1000).astype(int)
-    zones["label"] = zones.apply(lambda r: f"{r['area']}\nEUR {int(r['budget_eur'])}", axis=1)
+    zones = pd.DataFrame(market.get("zones", [])).copy()
+    if zones.empty:
+        zones = pd.DataFrame([{
+            "area": market.get("label", "Selected city"),
+            "lat": market.get("center", {}).get("lat", 48.1372),
+            "lon": market.get("center", {}).get("lon", 11.5756),
+            "radius_km": 2.5,
+            "role": "Test zone",
+            "age": "20–60",
+            "why": "Selected market",
+            "creative": "Two creative variants",
+        }])
+    zones = zones.head(3).copy()
+    zones["priority_score"] = 100
+    zones["test_weight"] = 1 / max(1, len(zones))
+    zones = _normalise_weights(zones)
+    per_zone = geo_budget / max(1, len(zones))
+    zones["budget_eur"] = per_zone
+    zones["radius_m"] = (pd.to_numeric(zones["radius_km"], errors="coerce").fillna(2.5) * 1000).astype(int)
+    zones["label"] = zones.apply(lambda r: f"{r['area']}\nEUR {int(round(r['budget_eur']))}", axis=1)
+    zones["market_city"] = market.get("label", "Selected city")
 
     meta = {
+        "market_city": market.get("label", "Selected city"),
+        "search_area": market.get("search_area", market.get("label", "Selected city")),
         "total_budget": total_budget,
         "validation_budget": validation_budget,
         "geo_budget": geo_budget,
@@ -116,20 +89,23 @@ def load_campaign_history(path: str | Path = "data/campaign_history.csv") -> pd.
     if not path.exists():
         return pd.DataFrame()
     try:
-        df = pd.read_csv(path)
+        return pd.read_csv(path)
     except Exception:
         return pd.DataFrame()
-    return df
 
 
-def measured_area_performance(history: pd.DataFrame) -> pd.DataFrame:
-    """Summarise tracked purchases; this is not an incremental-lift estimate."""
+def measured_area_performance(history: pd.DataFrame, market_city: str | None = None) -> pd.DataFrame:
+    """Summarise verified tracked purchases; this is not incremental lift."""
     if history is None or history.empty:
         return pd.DataFrame()
     required = {"area", "spend_eur", "tickets_attributed"}
     if not required.issubset(history.columns):
         return pd.DataFrame()
     df = history.copy()
+    if market_city and "city" in df.columns:
+        city = df["city"].fillna("").astype(str).str.strip()
+        if city.ne("").any():
+            df = df[city.str.casefold().eq(str(market_city).strip().casefold())]
     df["spend_eur"] = pd.to_numeric(df["spend_eur"], errors="coerce")
     df["tickets_attributed"] = pd.to_numeric(df["tickets_attributed"], errors="coerce")
     df = df.dropna(subset=["area", "spend_eur", "tickets_attributed"])
@@ -149,13 +125,9 @@ def measured_area_performance(history: pd.DataFrame) -> pd.DataFrame:
     finite = agg.loc[agg["ticket_cpa"].replace([math.inf], pd.NA).notna(), "ticket_cpa"]
     if len(finite):
         lo, hi = float(finite.min()), float(finite.max())
-        if hi > lo:
-            agg["measured_score"] = 100 - ((agg["ticket_cpa"].clip(upper=hi) - lo) / (hi - lo) * 45)
-        else:
-            agg["measured_score"] = 100
+        agg["measured_score"] = 100 if hi <= lo else 100 - ((agg["ticket_cpa"].clip(upper=hi) - lo) / (hi - lo) * 45)
     else:
         agg["measured_score"] = 50
-    # Ticket volume also matters, but less than CPA for the first tests.
     max_t = max(1.0, float(agg["tickets"].max()))
     agg["measured_score"] = (0.75 * agg["measured_score"] + 0.25 * (agg["tickets"] / max_t * 100)).round(0)
     return agg.sort_values(["measured_score", "tickets"], ascending=False)
@@ -165,17 +137,21 @@ def join_measured_to_zones(zones: pd.DataFrame, measured: pd.DataFrame) -> pd.Da
     out = zones.copy()
     if measured is None or measured.empty:
         out["display_score"] = out["priority_score"]
-        out["score_basis"] = "Pre-campaign priority"
+        out["score_basis"] = "Balanced test priority"
         return out
 
-    # Match normalised area names where possible; unmatched zones remain prior-only.
-    norm = lambda s: str(s).strip().lower().replace("forschungszentrum / eso", "eso").replace(" / ", " ")
+    norm = lambda s: str(s).strip().casefold()
     measured = measured.copy()
     measured["_k"] = measured["area"].map(norm)
     out["_k"] = out["area"].map(norm)
-    out = out.merge(measured[["_k", "spend_eur", "tickets", "ticket_cpa", "observations", "measured_score"]], on="_k", how="left")
+    out = out.merge(
+        measured[["_k", "spend_eur", "tickets", "ticket_cpa", "observations", "measured_score"]],
+        on="_k", how="left",
+    )
     out["display_score"] = out["measured_score"].fillna(out["priority_score"])
-    out["score_basis"] = out["measured_score"].apply(lambda v: "Measured tracked-purchase CPA" if pd.notna(v) else "Pre-campaign test priority")
+    out["score_basis"] = out["measured_score"].apply(
+        lambda v: "Measured tracked-purchase CPA" if pd.notna(v) else "Balanced pre-campaign test"
+    )
     return out.drop(columns=["_k"], errors="ignore")
 
 
