@@ -1,3 +1,12 @@
+## Management decision simulator and evidence simplification
+
+- Added a boss-facing Decision Simulator for city, budget and campaign-start what-if analysis.
+- Added low/base/high totals, scenario lift, occupancy probabilities, per-screening outlook and same-budget market comparison.
+- Replaced manager-facing 0–100 access scores with HIGH / MEDIUM / LOW accessibility bands; the internal factor remains available only for calculation/methodology.
+- Added explicit EMPIRICAL / SCENARIO / ASSUMPTION evidence labels.
+- Added `data/market_evidence.csv` for sourced adult-population, travel-time, Meta audience, Google demand and ESO visitor-origin inputs; missing values remain blank rather than being invented.
+- Added Project Doctor and unit-test coverage for the new market-evidence layer.
+
 ## Professional screening-by-screening forecast
 
 - Replaced the 52 / 52 / 52 / 52 equal split with a transparent per-screening scenario model.
