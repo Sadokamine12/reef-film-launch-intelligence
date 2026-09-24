@@ -80,14 +80,21 @@ with tab_spend:
         st.dataframe(levels[["Ceiling EUR", "Low", "Base tickets", "High", "Assumed extra", "P(50%)", "P(75%)"]].round(1), hide_index=True, width="stretch")
 
 with tab_screenings:
-    st.markdown("### No Tuesday is a proven favorite")
-    st.caption("The current data contains no Resolution booking history or credible day-specific advantage. Each Tuesday receives the same planning estimate.")
+    st.markdown("### Screening-by-screening planning forecast")
+    st.caption("No Tuesday is a measured winner yet. Before live Resolution sales exist, the total forecast is distributed with transparent calendar + campaign-maturity scenario weights rather than an artificial equal split.")
     shows = per_show_forecast(sim, cfg)
     fig = go.Figure()
     fig.add_trace(go.Bar(x=shows["show_date"], y=shows["base"], name="Base scenario", marker_color=TEAL, error_y=dict(type="data", symmetric=False, array=shows["high"]-shows["base"], arrayminus=shows["base"]-shows["low"])))
     fig.add_hline(y=cfg["capacity_per_show"], line_dash="dot", line_color="#A7B5BF", annotation_text="109 seats")
     fig.update_layout(height=410, yaxis_title="Tickets per screening", xaxis_title="February 2027 screening", plot_bgcolor="white", paper_bgcolor="white", showlegend=False, font=dict(color=INK))
     st.plotly_chart(fig, width="stretch", config={"displayModeBar": False})
+    show_table = shows[["show_date", "low", "base", "high", "occupancy_pct", "scenario_index", "scenario_driver"]].copy()
+    show_table = show_table.rename(columns={
+        "show_date": "Screening", "low": "Low", "base": "Base", "high": "High",
+        "occupancy_pct": "Occupancy %", "scenario_index": "Scenario index",
+        "scenario_driver": "Planning driver",
+    })
+    st.dataframe(show_table, hide_index=True, width="stretch")
     resolution = load_resolution_sales()
     pace = resolution_pace_forecast(resolution, curve, cfg)
     if pace.empty:
