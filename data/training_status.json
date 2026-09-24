@@ -24,7 +24,7 @@
       "benchmark_mae": 19.314056033357378,
       "benchmark_r2": -0.19399790251214077,
       "validation_mode": "grouped CV",
-      "model_path": "models\\eso_demand_lightweight.json",
+      "model_path": "models/eso_demand_lightweight.json",
       "operational": false,
       "notes": "Model trained, but grouped-by-show validation is not strong enough for operational use. The dashboard uses the empirical PAVA baseline instead."
     },
