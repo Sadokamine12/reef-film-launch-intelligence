@@ -93,9 +93,11 @@ def main() -> None:
           <p><b>EUR 90 first wave:</b> predicted +{first_wave_lift[1]} tickets (low +{first_wave_lift[0]} · high +{first_wave_lift[2]}), for about <b>{first_wave_total[1]} total tickets</b>.</p>
           <p><b>EUR {planned_spend} learning plan:</b> predicted +{lift[1]} tickets, for about <b>{with_tests[1]} total tickets</b>.</p></div>''', unsafe_allow_html=True)
     with right:
+        access_detail = f'{market_pred["public_transport_min"]:.0f} min public transport to ESO' if market_pred.get("public_transport_min") is not None else f'{market_pred["distance_to_venue_km"]:.1f} km straight-line distance to ESO'
+        pop_detail = f'{market_pred["working_age_population_20_64"]:,} people age 20–64'.replace(",", " ") if market_pred.get("working_age_population_20_64") else "Working-age population not connected"
         st.markdown(f'''<div class="reef-card"><div class="reef-label">Market accessibility</div><div class="reef-number">{market_pred["accessibility"]}</div>
-          <p>{market_pred["distance_to_venue_km"]:.1f} km straight-line distance to ESO Supernova.</p>
-          <p>Management band only. The underlying factor is a <b>planning assumption</b>, not measured city performance.</p></div>''', unsafe_allow_html=True)
+          <p>{access_detail}</p><p>{pop_detail}</p>
+          <p>Population is context only. Accessibility remains a <b>planning assumption</b>, not measured city performance.</p></div>''', unsafe_allow_html=True)
     st.markdown(f'<div class="reef-cta"><strong>{market["label"]} scenario:</strong> EUR 90 first wave → +{first_wave_lift[1]} tickets; EUR {planned_spend} learning plan → +{lift[1]} tickets and about {with_tests[1]}/{capacity} total seats filled. Low/base/high total: {with_tests[0]} / {with_tests[1]} / {with_tests[2]}. <strong>Confidence remains low until real campaign and Resolution booking data arrive.</strong></div>', unsafe_allow_html=True)
 
     st.markdown('## Ticket outlook')
@@ -129,8 +131,10 @@ def main() -> None:
         candidate_plan, _ = hybrid_simulation(cfg["marketing"]["experiment_budget_eur"], model=model, cfg=flat, emp_stats=empirical, n=2500, seed=73, market=candidate)
         comparison_rows.append({
             "Market": name,
-            "Distance to ESO (km)": candidate_meta["distance_to_venue_km"],
             "Accessibility": candidate_meta["accessibility"],
+            "Public transport (min)": int(round(candidate_meta["public_transport_min"])) if candidate_meta.get("public_transport_min") is not None else None,
+            "Working-age 20–64": candidate_meta.get("working_age_population_20_64"),
+            "Distance to ESO (km)": candidate_meta["distance_to_venue_km"],
             "EUR 90 predicted extra": int(round(candidate_wave["incremental_tickets"].median())),
             f"EUR {int(cfg['marketing']['experiment_budget_eur'])} predicted extra": int(round(candidate_plan["incremental_tickets"].median())),
             "Predicted total tickets": int(round(candidate_plan["total_tickets"].median())),
@@ -139,7 +143,7 @@ def main() -> None:
     import pandas as pd
     comparison_df = pd.DataFrame(comparison_rows)
     comparison_df["Selected"] = comparison_df["Market"].eq(market["label"]).map({True: "●", False: ""})
-    display_cols = ["Selected", "Market", "Accessibility", "Distance to ESO (km)", "EUR 90 predicted extra", f"EUR {int(cfg['marketing']['experiment_budget_eur'])} predicted extra", "Predicted total tickets", "P(50% occupancy)"]
+    display_cols = ["Selected", "Market", "Accessibility", "Public transport (min)", "Working-age 20–64", "Distance to ESO (km)", "EUR 90 predicted extra", f"EUR {int(cfg['marketing']['experiment_budget_eur'])} predicted extra", "Predicted total tickets", "P(50% occupancy)"]
     st.dataframe(
         comparison_df[display_cols].style.format({"Distance to ESO (km)": "{:.1f}", "P(50% occupancy)": "{:.0%}"}),
         hide_index=True, width="stretch",
@@ -225,7 +229,7 @@ def main() -> None:
         st.markdown(f'''- **ESO evidence:** {coverage['rows']} booking snapshots from {coverage['unique_shows']} shows. The nearest observation is {coverage['lead_min']:.0f} days before show.
 - **Demand model:** grouped MAE {float(eso_model.get('mae') or 0):.1f} occupancy points. It fails the operational gate, so the empirical curve is used.
 - **Marketing evidence:** {campaign['rows']} campaign observations; attribution level {attribution['level']}.
-- **Planning assumption:** EUR 0.85 per click and 0.045 additional tickets per click. Before city-level evidence exists, this is adjusted by a transparent access factor based on distance to ESO and a small direct-U6 accessibility adjustment. It is not learned city performance.
+- **Planning assumption:** EUR 0.85 per click and 0.045 additional tickets per click. City accessibility now prefers sourced public-transport time where available; otherwise it falls back to distance/access. Working-age population is display context only and does not inflate lift. None of these city effects are learned performance yet.
 - **Biggest risk:** no Resolution booking inventory and no comparable observations close to showtime.''')
 
     st.markdown('### Explore the details')

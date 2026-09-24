@@ -6,6 +6,8 @@ The screening venue and ESO empirical demand baseline remain fixed in Garching.
 from __future__ import annotations
 
 from copy import deepcopy
+from pathlib import Path
+import csv
 import math
 
 from project_config import load_config
@@ -170,6 +172,39 @@ def market_area_names(market: dict) -> list[str]:
     return [str(z["area"]) for z in market.get("zones", [])]
 
 
+MARKET_EVIDENCE_PATH = Path("data/market_evidence.csv")
+
+
+def load_market_evidence(path: str | Path = MARKET_EVIDENCE_PATH) -> dict[str, dict]:
+    """Load sourced market context without inventing missing values."""
+    p = Path(path)
+    if not p.exists():
+        return {}
+    rows: dict[str, dict] = {}
+    try:
+        with p.open("r", encoding="utf-8-sig", newline="") as handle:
+            for row in csv.DictReader(handle):
+                city = str(row.get("city", "")).strip()
+                if city:
+                    rows[city] = dict(row)
+    except Exception:
+        return {}
+    return rows
+
+
+def _as_float(value):
+    try:
+        if value is None or str(value).strip() == "":
+            return None
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _as_bool(value) -> bool:
+    return str(value or "").strip().lower() in {"1", "true", "yes", "y"}
+
+
 def distance_km(a_lat: float, a_lon: float, b_lat: float, b_lon: float) -> float:
     """Great-circle distance in kilometres between two coordinates."""
     r = 6371.0088
@@ -181,12 +216,11 @@ def distance_km(a_lat: float, a_lon: float, b_lat: float, b_lon: float) -> float
 
 
 def market_prediction_context(market: dict, cfg: dict | None = None) -> dict:
-    """Return transparent pre-campaign factors for a selected ad market.
+    """Return a transparent pre-campaign accessibility prior.
 
-    The factor is deliberately simple: distance to the fixed ESO venue reduces
-    the unverified ticket-conversion prior, while a direct U6-oriented preset
-    receives a small accessibility adjustment. It is a scenario prior, not a
-    learned city-performance score.
+    Sourced public-transport time is preferred when the evidence row is marked
+    model-eligible. Population is context only and does not increase ticket lift
+    until real campaign data can calibrate that relationship.
     """
     cfg = cfg or load_config()
     venue = cfg.get("venue", {})
@@ -197,23 +231,47 @@ def market_prediction_context(market: dict, cfg: dict | None = None) -> dict:
         float(venue.get("lat", 48.259828)),
         float(venue.get("lon", 11.670136)),
     )
-    # Smooth, conservative accessibility prior. The floor prevents distant
-    # markets from being treated as impossible before campaign evidence exists.
-    factor = 0.55 + 0.45 * math.exp(-km / 35.0)
-    if market.get("show_u6", False):
-        factor *= 1.05
+
+    evidence = load_market_evidence().get(str(market.get("label", "")), {})
+    travel_min = _as_float(evidence.get("avg_public_transport_min"))
+    travel_eligible = _as_bool(evidence.get("travel_time_model_eligible"))
+
+    if travel_min is not None and travel_eligible:
+        # Scenario-only conversion friction prior. The function is intentionally
+        # smooth and bounded; it is not an estimated causal effect.
+        factor = 0.60 + 0.40 * math.exp(-travel_min / 45.0)
+        basis = "Public-transport-time planning prior; not measured city performance"
+        access_driver = f"{travel_min:.0f} min public transport"
+    else:
+        factor = 0.55 + 0.45 * math.exp(-km / 35.0)
+        if market.get("show_u6", False):
+            factor *= 1.05
+        basis = "Distance/access planning prior; not measured city performance"
+        access_driver = f"{km:.1f} km straight-line distance"
+
     factor = max(0.55, min(1.05, factor))
-    if factor >= 0.93:
+    if factor >= 0.88:
         accessibility = "HIGH"
-    elif factor >= 0.78:
+    elif factor >= 0.75:
         accessibility = "MEDIUM"
     else:
         accessibility = "LOW"
+
+    working_age = _as_float(evidence.get("working_age_population_20_64"))
     return {
         "market": str(market.get("label", "Selected city")),
         "distance_to_venue_km": round(km, 1),
+        "public_transport_min": travel_min,
+        "working_age_population_20_64": int(round(working_age)) if working_age is not None else None,
+        "working_age_year": str(evidence.get("working_age_year", "")).strip() or None,
+        "population_method": str(evidence.get("working_age_method", "")).strip() or None,
+        "population_source": str(evidence.get("population_source", "")).strip() or None,
+        "travel_source": str(evidence.get("travel_source", "")).strip() or None,
+        "travel_time_basis": str(evidence.get("travel_time_basis", "")).strip() or None,
         "scenario_factor": float(factor),
         "scenario_index": int(round(factor * 100)),
         "accessibility": accessibility,
-        "basis": "Access-adjusted planning prior; not measured city performance",
+        "access_driver": access_driver,
+        "basis": basis,
     }
+

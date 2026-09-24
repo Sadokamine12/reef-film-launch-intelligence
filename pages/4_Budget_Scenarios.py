@@ -31,7 +31,8 @@ capacity = int(cfg["capacity_per_show"]) * len(cfg["show_dates"])
 
 market_meta = market_prediction_context(market, full)
 if not marketing.operational:
-    st.warning(f"Paid ticket lift has no controlled labels. {market['label']} currently uses a {market_meta['accessibility']} accessibility planning band ({market_meta['distance_to_venue_km']:.1f} km to ESO). Within the city, areas/creatives remain unproven until campaign data arrives.")
+    access_basis = f"{market_meta['public_transport_min']:.0f} min public transport to ESO" if market_meta.get("public_transport_min") is not None else f"{market_meta['distance_to_venue_km']:.1f} km straight-line distance"
+    st.warning(f"Paid ticket lift has no controlled labels. {market['label']} currently uses a {market_meta['accessibility']} accessibility planning band ({access_basis}). Within the city, areas/creatives remain unproven until campaign data arrives.")
 
 with st.expander("Change scenario inputs"):
     budget = st.slider("Maximum campaign budget (EUR)", 0, 1000, int(cfg["budget_eur"]), 25)
