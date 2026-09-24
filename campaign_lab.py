@@ -56,7 +56,7 @@ def _read(path: str | Path = CAMPAIGN_PATH) -> pd.DataFrame:
 
 def make_observation_id(row: dict) -> str:
     basis = "|".join(str(row.get(k, "")).strip() for k in [
-        "date", "show_date", "channel", "area", "age_band", "creative", "campaign_id", "adset_id", "test_id"
+        "date", "show_date", "channel", "city", "area", "age_band", "creative", "campaign_id", "adset_id", "test_id"
     ])
     return hashlib.sha1(basis.encode("utf-8", errors="ignore")).hexdigest()[:16]
 
@@ -93,7 +93,7 @@ def import_campaign_csv(uploaded_df: pd.DataFrame, path: str | Path = CAMPAIGN_P
         "impressions": "impressions", "link clicks": "clicks", "clicks (all)": "clicks",
         "views_75": "video_views_75", "video_75": "video_views_75", "video plays at 75%": "video_views_75",
         "landing_views": "landing_page_views", "lpv": "landing_page_views", "landing page views": "landing_page_views",
-        "tickets": "tickets_attributed", "geo": "area", "audience": "age_band", "ad set id": "adset_id",
+        "tickets": "tickets_attributed", "city": "city", "market": "city", "geo": "area", "audience": "age_band", "ad set id": "adset_id",
         "campaign id": "campaign_id", "ad name": "creative", "ad set name": "area",
     }
     rename = {}
@@ -119,6 +119,7 @@ def campaign_summary(path: str | Path = CAMPAIGN_PATH) -> dict:
     return {
         "rows": len(df),
         "spend_eur": float(df["spend_eur"].sum(skipna=True) or 0),
+        "cities": int(df["city"].replace("", pd.NA).dropna().nunique()),
         "areas": int(df["area"].replace("", pd.NA).dropna().nunique()),
         "ages": int(df["age_band"].replace("", pd.NA).dropna().nunique()),
         "creatives": int(df["creative"].replace("", pd.NA).dropna().nunique()),
