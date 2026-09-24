@@ -23,6 +23,7 @@ from external_sources import load_external_source_status, source_readiness_rows
 from market_context import market_catalog, custom_market, market_prediction_context
 from model_quality import confidence_summary
 from ui import editing_enabled
+from platform_import import normalize_platform_export
 
 
 class DataTests(unittest.TestCase):
@@ -189,6 +190,21 @@ class DataTests(unittest.TestCase):
         self.assertFalse(next(r for r in rows if r["Source"] == "Google Ads")["Ready"])
         self.assertFalse(next(r for r in rows if r["Source"] == "ESO Resolution bookings")["Ready"])
         self.assertEqual(status["eso_resolution"]["public_booking_urls_found"], 0)
+
+    def test_provider_export_normalization_never_invents_ticket_lift(self):
+        meta = pd.DataFrame([{
+            "Date": "2027-01-10", "Campaign": "Resolution test", "Ad Set Name": "Freising Zentrum",
+            "Ad Name": "SXSW proof", "Amount Spent": 15, "Impressions": 1200, "Reach": 850,
+            "Clicks": 24, "Landing Page Views": 18, "Website Purchases": 3,
+        }])
+        out = normalize_platform_export(meta, "Meta Ads", "Freising")
+        self.assertEqual(out.iloc[0]["channel"], "Meta")
+        self.assertEqual(out.iloc[0]["city"], "Freising")
+        self.assertEqual(out.iloc[0]["area"], "Freising Zentrum")
+        self.assertEqual(out.iloc[0]["platform_purchases"], 3)
+        self.assertTrue(pd.isna(out.iloc[0]["tickets_attributed"]))
+        self.assertTrue(pd.isna(out.iloc[0]["incremental_tickets_estimate"]))
+        self.assertEqual(out.iloc[0]["label_source"], "")
 
     def test_no_sklearn_import_and_page_syntax(self):
         for path in [*Path(".").glob("*.py"), *Path("pages").glob("*.py")]:
