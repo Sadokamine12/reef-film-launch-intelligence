@@ -94,7 +94,7 @@ def _status_model(name_prefix: str) -> dict:
 def load_marketing_model() -> MarketingModelBundle:
     status = _status_model("Ticket-lift")
     rows = int(status.get("rows", 0) or 0)
-    path = Path(status.get("model_path") or "models/ticket_lift_response_lightweight.json")
+    path = Path(str(status.get("model_path") or "models/ticket_lift_response_lightweight.json").replace("\\", "/"))
     operational = bool(status.get("operational", False)) and str(status.get("status", "")).lower() == "trained"
     if operational and path.exists():
         try:
