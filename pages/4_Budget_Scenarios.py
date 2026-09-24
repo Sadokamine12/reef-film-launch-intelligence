@@ -12,6 +12,7 @@ from advanced_ml import (
 )
 from model_quality import current_eso_model, load_status
 from project_config import load_config as load_project_config
+from market_context import market_prediction_context
 from ui import apply_theme, page_intro, select_market, BLUE, TEAL, AMBER, INK
 
 st.set_page_config(page_title="Budget Scenarios | REEF", page_icon="📈", layout="wide")
@@ -28,8 +29,9 @@ curve, empirical, _ = empirical_baseline()
 marketing = load_marketing_model()
 capacity = int(cfg["capacity_per_show"]) * len(cfg["show_dates"])
 
+market_meta = market_prediction_context(market, full)
 if not marketing.operational:
-    st.warning("Paid ticket lift has no controlled labels. Every paid scenario here uses the same unverified assumption for all areas, ages, channels and creatives. It does not identify a winning ad cell.")
+    st.warning(f"Paid ticket lift has no controlled labels. {market['label']} currently uses an access-adjusted planning prior ({market_meta['scenario_index']}/100; {market_meta['distance_to_venue_km']:.1f} km to ESO). Within the city, areas/creatives remain unproven until campaign data arrives.")
 
 with st.expander("Change scenario inputs"):
     budget = st.slider("Maximum campaign budget (EUR)", 0, 1000, int(cfg["budget_eur"]), 25)
@@ -43,12 +45,13 @@ low, middle, high = [round(float(sim["total_tickets"].quantile(q))) for q in (.1
 baseline_mid = round(float(baseline["total_tickets"].median()))
 lift_mid = round(float(sim["incremental_tickets"].median()))
 
-cols = st.columns(4)
-cols[0].metric("No-paid estimate", f"{baseline_mid} tickets")
-cols[1].metric("With planned tests", f"{middle} tickets")
-cols[2].metric("Assumed extra", f"+{lift_mid} tickets")
-cols[3].metric("Spend released", f"EUR {spent:.0f}", f"EUR {budget-spent:.0f} held")
-st.caption(f"Low / base / high: {low} / {middle} / {high} of {capacity} seats. These are planning ranges, not calibrated prediction intervals.")
+cols = st.columns(5)
+cols[0].metric("Selected market", market["label"], f"Access prior {market_meta['scenario_index']}/100")
+cols[1].metric("No-paid estimate", f"{baseline_mid} tickets")
+cols[2].metric("With planned tests", f"{middle} tickets")
+cols[3].metric("Predicted extra", f"+{lift_mid} tickets")
+cols[4].metric("Spend released", f"EUR {spent:.0f}", f"EUR {budget-spent:.0f} held")
+st.caption(f"Low / base / high: {low} / {middle} / {high} of {capacity} seats for {market['label']}. These are access-adjusted planning predictions, not calibrated prediction intervals.")
 
 forecast = budget_forecast_curve(1000, 50, model=marketing, cfg=cfg, emp_stats=empirical, days_to_event=days_to_event, market=market)
 tab_spend, tab_screenings, tab_next = st.tabs(["Spend and occupancy", "Four Tuesdays", "Next decision"])
