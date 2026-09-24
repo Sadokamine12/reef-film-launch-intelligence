@@ -81,7 +81,7 @@ def main() -> None:
 
     left, right = st.columns([1.6, 1], gap="medium")
     with left:
-        st.markdown('''<div class="reef-card"><div class="reef-label">Recommendation</div><h3>Prepare a small, balanced first test</h3>
+        st.markdown(f'''<div class="reef-card"><div class="reef-label">Recommendation</div><h3>Prepare a small, balanced first test</h3>
           <p>Target adults <b>20–60</b> in the three balanced test zones selected for <b>{market["label"]}</b>.</p>
           <p><b>{", ".join(zones["area"].tolist())}</b></p>
           <p>Test <b>SXSW proof</b> against <b>music + 360° experience</b> in each area. Six Meta cells, EUR 15 each. No measured winner exists yet.</p></div>''', unsafe_allow_html=True)
