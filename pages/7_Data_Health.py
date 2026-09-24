@@ -5,6 +5,7 @@ import streamlit as st
 
 from data_health import health_frame, health_summary
 from experiment_protocol import attribution_requirements
+from external_sources import load_external_source_status, source_readiness_rows
 from ui import apply_theme, page_intro
 
 st.set_page_config(page_title="Data Health", page_icon="🩺", layout="wide")
@@ -31,6 +32,13 @@ with st.expander("Show every project doctor check"):
 
 with st.expander("Understand attribution levels A–E"):
     st.dataframe(attribution_requirements(), width="stretch", hide_index=True)
+
+st.subheader("Live source readiness")
+source_status = load_external_source_status()
+source_rows = pd.DataFrame(source_readiness_rows(source_status))
+source_rows["Ready"] = source_rows["Ready"].map({True: "YES", False: "NO"})
+st.dataframe(source_rows, hide_index=True, width="stretch")
+st.caption("Meta/Google account authorization and ESO booking publication are external prerequisites. The dashboard does not infer readiness from empty or unrelated account data.")
 
 st.subheader("Methodology boundaries")
 st.markdown("""
