@@ -4,7 +4,7 @@ from __future__ import annotations
 import plotly.graph_objects as go
 import streamlit as st
 
-from advanced_ml import empirical_baseline, hybrid_simulation, load_config as flat_config, load_marketing_model
+from advanced_ml import empirical_baseline, hybrid_simulation, load_config as flat_config, load_marketing_model, per_show_forecast
 from campaign_lab import attribution_readiness, campaign_summary
 from model_quality import confidence_summary, current_eso_model, eso_coverage
 from project_config import load_config, total_capacity
@@ -160,12 +160,54 @@ def main() -> None:
     )
     st.plotly_chart(fig, width="stretch", config={"displayModeBar": False})
 
-    st.markdown('## Four Tuesdays')
-    st.caption('No screening has a measured advantage. The current planning case divides the series evenly.')
+    st.markdown('## Screening-by-screening forecast')
+    shows = per_show_forecast(plan_sim, flat)
+    st.caption('The four-show total is unchanged, but it is no longer split evenly. The current pre-launch distribution uses transparent calendar + campaign-maturity scenario weights. These are planning assumptions, not measured Tuesday effects.')
+
+    fig = go.Figure()
+    fig.add_trace(go.Bar(
+        x=shows["show_date"],
+        y=shows["base"],
+        text=[f"{v} · {o:.0f}%" for v, o in zip(shows["base"], shows["occupancy_pct"])],
+        textposition="outside",
+        marker_color=TEAL,
+        error_y=dict(
+            type="data", symmetric=False,
+            array=(shows["high"] - shows["base"]).tolist(),
+            arrayminus=(shows["base"] - shows["low"]).tolist(),
+            thickness=2, width=5,
+        ),
+        hovertemplate="<b>%{x}</b><br>Base %{y} tickets<br>%{text}<extra></extra>",
+        name="Base",
+    ))
+    fig.add_hline(y=cfg["venue"]["capacity_per_show"], line_dash="dot", line_color="#A7B5BF", annotation_text="109-seat capacity")
+    fig.update_layout(
+        height=390, showlegend=False, xaxis_title="Tuesday screening", yaxis_title="Tickets",
+        yaxis_range=[0, cfg["venue"]["capacity_per_show"] + 12],
+        plot_bgcolor="white", paper_bgcolor="white",
+        margin=dict(l=40, r=25, t=25, b=45), font=dict(color=INK),
+    )
+    st.plotly_chart(fig, width="stretch", config={"displayModeBar": False})
+
     cols = st.columns(4, gap="medium")
-    for col, day in zip(cols, cfg['screenings']['dates']):
+    for col, (_, row) in zip(cols, shows.iterrows()):
+        day = str(row["show_date"])
         with col:
-            st.markdown(card(f'Tuesday {day[8:10]} February', str(round(with_tests[1]/4)), f'of {cfg["venue"]["capacity_per_show"]} seats · scenario'), unsafe_allow_html=True)
+            st.markdown(
+                card(
+                    f'Tuesday {day[8:10]} February',
+                    str(int(row["base"])),
+                    f'{row["occupancy_pct"]:.0f}% occupancy · low {int(row["low"])} · high {int(row["high"])}',
+                    f'<span class="reef-pill">Scenario index {int(row["scenario_index"])}</span><br><br>{row["scenario_driver"]}'
+                ),
+                unsafe_allow_html=True,
+            )
+
+    with st.expander('Why the Tuesday forecasts differ'):
+        for _, row in shows.iterrows():
+            st.markdown(f"**{row['show_date']} — index {int(row['scenario_index'])}:** {row['calendar_fact']}  
+*Scenario assumption:* {row['scenario_driver']}")
+        st.caption('The calendar facts are externally verifiable. The direction and size of each weight are modelling assumptions and will be replaced or updated once Resolution-specific sales pace exists.')
 
     st.markdown('## What changes the decision')
     steps = st.columns(3, gap="medium")
