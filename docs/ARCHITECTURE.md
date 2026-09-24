@@ -17,3 +17,12 @@ The doctor reports blocking integrity problems as FAIL and unavailable future ev
 ## Pre-campaign city prediction
 
 Before controlled campaign evidence exists, city selection affects the paid-media planning prior through a transparent accessibility factor implemented in `market_context.market_prediction_context`. It uses straight-line distance from the selected market centre to the fixed ESO venue, with a small adjustment for presets explicitly built around direct U6 access. The factor is bounded and applies only to the pre-campaign ticket-conversion prior. It never changes the empirical ESO no-paid baseline and is replaced/anchored by real campaign modelling once controlled evidence becomes operational.
+
+
+## Screening-level forecast split
+
+The project now separates the **series total forecast** from the **screening allocation**. `advanced_ml.per_show_forecast` preserves the low/base/high four-show totals and allocates them across 2, 9, 16 and 23 February with transparent scenario weights stored in `config/project.json`. Current indices are 96 / 92 / 108 / 104, averaging exactly 100 so the total forecast is not inflated or reduced by the split.
+
+Calendar facts used as context: TUM and LMU Wintersemester 2026/27 lecture periods end on 5 February 2027; Bavaria's spring school holidays run 8–12 February 2027. The code treats campaign maturity, holiday/local-presence risk and final-show urgency as **scenario assumptions**, not measured causal effects. Once Resolution booking URLs produce repeated per-show observations, those priors should be updated or superseded by actual pace.
+
+Sources: https://www.km.bayern.de/termine/ferien-und-feiertage ; https://www.tum.de/studium/bewerbung/infoportal-bewerbung/termine-und-fristen ; https://www.lmu.de/de/workspace-fuer-studierende/1x1-des-studiums/vorlesungszeiten/
