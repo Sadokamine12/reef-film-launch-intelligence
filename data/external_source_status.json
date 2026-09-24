@@ -1,0 +1,23 @@
+{
+  "checked_at": "2026-09-24",
+  "meta_ads": {
+    "connector": "facebook",
+    "connected_account_present": true,
+    "confirmed_reef_account": false,
+    "usable_rows_last_2_years": 0,
+    "status": "needs_reef_account_authorization",
+    "note": "A Meta Ads account is connected in Windsor.ai, but it returned zero reporting rows and is not confirmed as the REEF advertising account. Do not ingest or label it as REEF data."
+  },
+  "google_ads": {
+    "connector": "google_ads",
+    "connected_account_present": false,
+    "status": "not_connected",
+    "note": "Authorize the REEF Google Ads account before using campaign metrics."
+  },
+  "eso_resolution": {
+    "public_booking_urls_found": 0,
+    "expected_booking_urls": 4,
+    "status": "not_published",
+    "note": "ESO's public release currently states planetarium shows are bookable through the end of 2026; no public Resolution booking pages for 2, 9, 16, or 23 February 2027 were found in the latest check."
+  }
+}
