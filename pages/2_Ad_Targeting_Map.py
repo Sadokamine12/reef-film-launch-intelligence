@@ -35,6 +35,7 @@ apply_theme()
 
 from project_config import load_config
 from campaign_lab import attribution_readiness
+from market_context import market_prediction_context
 
 cfg = load_config()
 marketing_cfg = cfg.get("marketing", {})
@@ -68,6 +69,7 @@ with st.expander("Map display options"):
     )
 
 zones, meta = planned_zones(total_budget, validation_budget, search_budget, market=market)
+market_pred = market_prediction_context(market, cfg)
 history = load_campaign_history()
 measured = measured_area_performance(history, market_city=market["label"])
 zones = join_measured_to_zones(zones, measured)
@@ -91,11 +93,12 @@ ROLE_COLORS = {
     "South": (245, 158, 66),
 }
 
-k0, k1, k2, k3 = st.columns(4)
+k0, k1, k2, k3, k4 = st.columns(5)
 k0.metric("Selected market", market["label"])
-k1.metric("First geography test", f"EUR {meta['geo_budget']:.0f}")
-k2.metric("Balanced cells", "3 areas × 2 creatives")
-k3.metric("Held for later decisions", f"EUR {meta['total_budget']-meta['geo_budget']:.0f}")
+k1.metric("Access prior", f"{market_pred['scenario_index']}/100", f"{market_pred['distance_to_venue_km']:.1f} km to ESO")
+k2.metric("First geography test", f"EUR {meta['geo_budget']:.0f}")
+k3.metric("Balanced cells", "3 areas × 2 creatives")
+k4.metric("Held for later decisions", f"EUR {meta['total_budget']-meta['geo_budget']:.0f}")
 st.caption("Area colours show measured tracked-purchase performance when reliable rows exist. Until then they show test geography, not a success probability.")
 
 if measured_ready:

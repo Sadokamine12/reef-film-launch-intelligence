@@ -1,3 +1,12 @@
+## Immediate city-specific predictions
+
+- Selecting a target market now changes the paid-media scenario numerically instead of only changing labels and map zones.
+- Added an access-adjusted pre-campaign prior based on distance to ESO plus a small direct-U6 accessibility adjustment.
+- Executive Forecast now shows EUR 90 first-wave predicted incremental tickets, EUR 240 learning-plan prediction, low/base/high totals, and a cross-city planning comparison.
+- Budget Scenarios and Ad Targeting Map now show the selected market's access prior and distance to ESO.
+- Added tests that verify different cities produce different planning lift while keeping the same EUR 90 test budget.
+- City differences remain explicitly labelled as scenario priors until real campaign evidence exists.
+
 ## City-selectable campaign planning
 
 - Added a boss-facing target-market selector shared across the executive forecast, targeting map, experiment plan, budget scenarios and campaign data.

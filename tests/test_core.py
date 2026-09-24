@@ -19,7 +19,7 @@ from training_engine import _group_folds, generate_active_learning_plan
 from advanced_ml import optimize_budget
 from ad_targeting_map import planned_zones
 from experiment_protocol import build_experiment_plan
-from market_context import market_catalog, custom_market
+from market_context import market_catalog, custom_market, market_prediction_context
 from model_quality import confidence_summary
 from ui import editing_enabled
 
@@ -127,6 +127,26 @@ class DataTests(unittest.TestCase):
         plan = build_experiment_plan(custom)
         self.assertEqual(plan[plan["wave"].eq("Geo + creative")]["area"].nunique(), 3)
         self.assertTrue(plan["city"].eq("Teststadt").all())
+
+    def test_city_prediction_prior_changes_planning_lift(self):
+        markets = market_catalog()
+        local = markets["Garching / Munich North"]
+        freising = markets["Freising"]
+        local_meta = market_prediction_context(local)
+        freising_meta = market_prediction_context(freising)
+        self.assertLess(local_meta["distance_to_venue_km"], freising_meta["distance_to_venue_km"])
+        self.assertGreater(local_meta["scenario_factor"], freising_meta["scenario_factor"])
+        self.assertGreaterEqual(freising_meta["scenario_factor"], 0.55)
+        self.assertLessEqual(local_meta["scenario_factor"], 1.05)
+
+        local_alloc = optimize_budget(90, market=local)
+        freising_alloc = optimize_budget(90, market=freising)
+        self.assertAlmostEqual(float(local_alloc["budget_eur"].sum()), 90.0, places=6)
+        self.assertAlmostEqual(float(freising_alloc["budget_eur"].sum()), 90.0, places=6)
+        self.assertGreater(
+            float(local_alloc["expected_extra_tickets"].sum()),
+            float(freising_alloc["expected_extra_tickets"].sum()),
+        )
 
     def test_no_sklearn_import_and_page_syntax(self):
         for path in [*Path(".").glob("*.py"), *Path("pages").glob("*.py")]:

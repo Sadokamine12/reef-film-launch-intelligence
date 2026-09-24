@@ -13,7 +13,7 @@ from data_contracts import read_csv_safe, ensure_campaign_frame
 from eso_baseline import load_validated_snapshots, fit_empirical_sales_curve
 from project_config import load_config as load_project_config, flat_context
 from experiment_protocol import build_experiment_plan
-from market_context import get_market
+from market_context import get_market, market_prediction_context
 from lightweight_ml import LightweightEnsemble
 
 ZONE_PRIORS = [
@@ -118,7 +118,7 @@ def train_marketing_ensemble(history: Optional[pd.DataFrame] = None, seed: int =
     return load_marketing_model()
 
 
-def _prior_cell_tickets(spend: float, area: str, age_band: str, channel: str, creative: str) -> float:
+def _prior_cell_tickets(spend: float, area: str, age_band: str, channel: str, creative: str, market_factor: float = 1.0) -> float:
     spend = max(0.0, float(spend))
     if spend <= 0:
         return 0.0
@@ -126,7 +126,7 @@ def _prior_cell_tickets(spend: float, area: str, age_band: str, channel: str, cr
     zone_w = next((z["weight"] for z in ZONE_PRIORS if z["area"] == area), 1.0)
     age_w = AGE_PRIORS.get(age_band, 1.0)
     creative_w = CREATIVE_PRIORS.get(creative, 1.0)
-    raw = (spend / cp["cpc"]) * cp["purchase_rate"] * zone_w * age_w * creative_w
+    raw = (spend / cp["cpc"]) * cp["purchase_rate"] * zone_w * age_w * creative_w * max(0.0, float(market_factor))
     saturation = 1.0 / (1.0 + max(0.0, spend - 75.0) / 450.0)
     return max(0.0, raw * saturation)
 
@@ -141,11 +141,12 @@ def scenario_grid(test_spend: float = 50.0, model: Optional[MarketingModelBundle
     rows = []
     market = market or get_market()
     zone_priors = [{"area": z["area"], "weight": 1.0, "why": z.get("why", "Selected market test zone")} for z in market.get("zones", [])] or ZONE_PRIORS
+    market_meta = market_prediction_context(market)
     for z in zone_priors:
         for age in AGE_PRIORS:
             for channel in CHANNEL_PRIORS:
                 for creative in CREATIVE_PRIORS:
-                    prior = _prior_cell_tickets(test_spend, z["area"], age, channel, creative)
+                    prior = _prior_cell_tickets(test_spend, z["area"], age, channel, creative, market_factor=market_meta["scenario_factor"])
                     if model.operational and model.model is not None:
                         pred = float(model.predict(_model_row(test_spend, z["area"], age, channel, creative, days_to_event, model, city=market.get("label", "")))[0])
                         # Preserve a small prior anchor because samples will stay small for this one campaign.
@@ -161,7 +162,8 @@ def scenario_grid(test_spend: float = 50.0, model: Optional[MarketingModelBundle
                         "city": market.get("label", ""), "area": z["area"], "age_band": age, "channel": channel, "creative": creative,
                         "spend_eur": float(test_spend), "days_to_event": int(days_to_event), "prior_tickets": prior,
                         "predicted_extra_tickets": max(0.0, expected), "prediction_basis": basis,
-                        "uncertainty_tickets": uncertainty, "why": z["why"],
+                        "uncertainty_tickets": uncertainty, "why": z["why"], "market_factor": market_meta["scenario_factor"],
+                        "distance_to_venue_km": market_meta["distance_to_venue_km"],
                     })
     df = pd.DataFrame(rows)
     df["predicted_cpa"] = np.where(df["predicted_extra_tickets"] > 0, df["spend_eur"] / df["predicted_extra_tickets"], np.inf)
@@ -173,7 +175,7 @@ def scenario_grid(test_spend: float = 50.0, model: Optional[MarketingModelBundle
 def _cell_prediction(spend: float, row: pd.Series, model: MarketingModelBundle, days_to_event: int) -> float:
     if spend <= 0:
         return 0.0
-    prior = _prior_cell_tickets(spend, row["area"], row["age_band"], row["channel"], row["creative"])
+    prior = _prior_cell_tickets(spend, row["area"], row["age_band"], row["channel"], row["creative"], market_factor=float(row.get("market_factor", 1.0)))
     if model.operational and model.model is not None:
         pred = float(model.predict(_model_row(spend, row["area"], row["age_band"], row["channel"], row["creative"], days_to_event, model, city=str(row.get("city", ""))))[0])
         ml_weight = min(0.90, max(0.60, 0.60 + max(0, model.rows - 18) / 100))
@@ -190,7 +192,9 @@ def optimize_budget(total_budget: float, model: Optional[MarketingModelBundle] =
         # A numerical optimiser would manufacture a winner from equal, unmeasured
         # priors. Before lift evidence exists, only the precommitted learning plan
         # can be allocated; the rest is explicitly reserved.
-        plan = build_experiment_plan(market or get_market())
+        selected_market = market or get_market()
+        market_meta = market_prediction_context(selected_market)
+        plan = build_experiment_plan(selected_market)
         remaining = min(total_budget, float(load_project_config()["marketing"]["experiment_budget_eur"]))
         rows = []
         for _, item in plan.iterrows():
@@ -199,8 +203,9 @@ def optimize_budget(total_budget: float, model: Optional[MarketingModelBundle] =
                 continue
             remaining -= spend
             row = {"city": item.get("city", (market or get_market()).get("label", "")), "area": item["area"], "age_band": item["age_band"], "channel": item["channel"], "creative": item["creative"]}
-            prior = _prior_cell_tickets(spend, row["area"], row["age_band"], row["channel"], row["creative"])
+            prior = _prior_cell_tickets(spend, row["area"], row["age_band"], row["channel"], row["creative"], market_factor=market_meta["scenario_factor"])
             rows.append({**row, "budget_eur": spend, "expected_extra_tickets": prior,
+                         "market_factor": market_meta["scenario_factor"], "distance_to_venue_km": market_meta["distance_to_venue_km"],
                          "expected_cpa": spend / prior if prior else np.inf,
                          "prediction_basis": "Unverified planning scenario; reserve unallocated"})
             if remaining <= 0:
@@ -232,6 +237,7 @@ def optimize_budget(total_budget: float, model: Optional[MarketingModelBundle] =
         expected = _cell_prediction(spend, r, model, days_to_event)
         rows.append({
             "city": r.get("city", ""), "area": r["area"], "age_band": r["age_band"], "channel": r["channel"], "creative": r["creative"],
+            "market_factor": r.get("market_factor", 1.0), "distance_to_venue_km": r.get("distance_to_venue_km", np.nan),
             "budget_eur": spend, "expected_extra_tickets": expected,
             "expected_cpa": spend / expected if expected > 0 else np.inf,
             "prediction_basis": "Operational ML" if model.operational else "Scenario prior — do not treat as optimized winner",
