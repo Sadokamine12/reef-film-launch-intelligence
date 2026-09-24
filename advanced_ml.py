@@ -12,6 +12,8 @@ import pandas as pd
 from data_contracts import read_csv_safe, ensure_campaign_frame
 from eso_baseline import load_validated_snapshots, fit_empirical_sales_curve
 from project_config import load_config as load_project_config, flat_context
+from experiment_protocol import build_experiment_plan
+from market_context import get_market
 from lightweight_ml import LightweightEnsemble
 
 ZONE_PRIORS = [
@@ -134,10 +136,12 @@ def _model_row(spend: float, area: str, age: str, channel: str, creative: str, d
     return pd.DataFrame([{f: data.get(f, "Unknown") for f in model.features}])
 
 
-def scenario_grid(test_spend: float = 50.0, model: Optional[MarketingModelBundle] = None, days_to_event: int = 30) -> pd.DataFrame:
+def scenario_grid(test_spend: float = 50.0, model: Optional[MarketingModelBundle] = None, days_to_event: int = 30, market: dict | None = None) -> pd.DataFrame:
     model = model or load_marketing_model()
     rows = []
-    for z in ZONE_PRIORS:
+    market = market or get_market()
+    zone_priors = [{"area": z["area"], "weight": 1.0, "why": z.get("why", "Selected market test zone")} for z in market.get("zones", [])] or ZONE_PRIORS
+    for z in zone_priors:
         for age in AGE_PRIORS:
             for channel in CHANNEL_PRIORS:
                 for creative in CREATIVE_PRIORS:
@@ -177,7 +181,7 @@ def _cell_prediction(spend: float, row: pd.Series, model: MarketingModelBundle, 
     return prior
 
 
-def optimize_budget(total_budget: float, model: Optional[MarketingModelBundle] = None, days_to_event: int = 30, increment: float = 25.0, max_cell_share: float = 0.40, top_cells: int = 18) -> pd.DataFrame:
+def optimize_budget(total_budget: float, model: Optional[MarketingModelBundle] = None, days_to_event: int = 30, increment: float = 25.0, max_cell_share: float = 0.40, top_cells: int = 18, market: dict | None = None) -> pd.DataFrame:
     model = model or load_marketing_model()
     total_budget = max(0.0, float(total_budget))
     if total_budget <= 0:
@@ -186,7 +190,7 @@ def optimize_budget(total_budget: float, model: Optional[MarketingModelBundle] =
         # A numerical optimiser would manufacture a winner from equal, unmeasured
         # priors. Before lift evidence exists, only the precommitted learning plan
         # can be allocated; the rest is explicitly reserved.
-        plan = read_csv_safe("data/experiment_plan.csv")
+        plan = build_experiment_plan(market or get_market())
         remaining = min(total_budget, float(load_project_config()["marketing"]["experiment_budget_eur"]))
         rows = []
         for _, item in plan.iterrows():
@@ -202,7 +206,7 @@ def optimize_budget(total_budget: float, model: Optional[MarketingModelBundle] =
             if remaining <= 0:
                 break
         return pd.DataFrame(rows)
-    grid = scenario_grid(test_spend=50, model=model, days_to_event=days_to_event).head(top_cells).copy()
+    grid = scenario_grid(test_spend=50, model=model, days_to_event=days_to_event, market=market).head(top_cells).copy()
     allocations = {i: 0.0 for i in grid.index}
     steps = int(round(total_budget / increment))
     max_cell = max(increment, total_budget * max_cell_share)
@@ -261,7 +265,7 @@ def _baseline_params(cfg: dict, emp_stats: dict) -> tuple[float, float]:
     return float(np.clip(fill, 0.05, 0.95)), float(np.clip(unc, 0.12, 0.50))
 
 
-def hybrid_simulation(budget: float, model: Optional[MarketingModelBundle] = None, cfg: Optional[dict] = None, emp_stats: Optional[dict] = None, days_to_event: int = 30, n: int = 10000, seed: int = 42) -> tuple[pd.DataFrame, pd.DataFrame]:
+def hybrid_simulation(budget: float, model: Optional[MarketingModelBundle] = None, cfg: Optional[dict] = None, emp_stats: Optional[dict] = None, days_to_event: int = 30, n: int = 10000, seed: int = 42, market: dict | None = None) -> tuple[pd.DataFrame, pd.DataFrame]:
     model = model or load_marketing_model()
     cfg = cfg or load_config()
     emp_stats = emp_stats or {}
@@ -269,7 +273,7 @@ def hybrid_simulation(budget: float, model: Optional[MarketingModelBundle] = Non
     dates = cfg.get("show_dates", [])
     total_capacity = capacity * len(dates)
     baseline_fill, baseline_unc = _baseline_params(cfg, emp_stats)
-    allocation = optimize_budget(budget, model=model, days_to_event=days_to_event)
+    allocation = optimize_budget(budget, model=model, days_to_event=days_to_event, market=market)
     expected_lift = float(allocation["expected_extra_tickets"].sum()) if not allocation.empty else 0.0
     if model.operational:
         lift_sd = max(float(model.mae or 2.5) * math.sqrt(max(1, len(allocation))), expected_lift * 0.20)
@@ -298,13 +302,13 @@ def hybrid_simulation(budget: float, model: Optional[MarketingModelBundle] = Non
     return pd.DataFrame(rows), allocation
 
 
-def budget_forecast_curve(max_budget: int = 1000, step: int = 50, model: Optional[MarketingModelBundle] = None, cfg: Optional[dict] = None, emp_stats: Optional[dict] = None, days_to_event: int = 30) -> pd.DataFrame:
+def budget_forecast_curve(max_budget: int = 1000, step: int = 50, model: Optional[MarketingModelBundle] = None, cfg: Optional[dict] = None, emp_stats: Optional[dict] = None, days_to_event: int = 30, market: dict | None = None) -> pd.DataFrame:
     cfg = cfg or load_config()
     capacity = int(cfg.get("capacity_per_show", 109)) * len(cfg.get("show_dates", []))
     rows = []
     for b in range(0, max_budget + 1, step):
         # Common random numbers make spend differences reflect allocation, not noise.
-        sim, _ = hybrid_simulation(b, model=model, cfg=cfg, emp_stats=emp_stats, days_to_event=days_to_event, n=2000, seed=1000)
+        sim, _ = hybrid_simulation(b, model=model, cfg=cfg, emp_stats=emp_stats, days_to_event=days_to_event, n=2000, seed=1000, market=market)
         rows.append({
             "budget_eur": b,
             "low_tickets": float(sim["total_tickets"].quantile(0.10)),
