@@ -13,7 +13,7 @@ from ad_targeting_map import (
     join_measured_to_zones,
     u6_path_frame,
 )
-from ui import apply_theme
+from ui import apply_theme, select_market
 
 st.set_page_config(page_title="Resolution Ad Targeting Map", page_icon="🗺️", layout="wide")
 
@@ -39,12 +39,16 @@ from campaign_lab import attribution_readiness
 cfg = load_config()
 marketing_cfg = cfg.get("marketing", {})
 attribution = attribution_readiness()
+with st.sidebar:
+    st.markdown("### Test market")
+    market = select_market()
+    st.caption("Changing the city changes the ad experiment and map, not the ESO venue baseline.")
 
 st.markdown(
     """
 <div class="hero-map">
   <h1>Where to market</h1>
-  <p>Three balanced geography tests near ESO and along the U6 corridor · EUR 90 first wave</p>
+  <p>Three balanced geography tests in the selected target market · EUR 90 first wave</p>
 </div>
 """,
     unsafe_allow_html=True,
@@ -63,21 +67,32 @@ with st.expander("Map display options"):
         help="If your network blocks one tile provider, switch to another. 'No tiles' still shows all campaign zones.",
     )
 
-zones, meta = planned_zones(total_budget, validation_budget, search_budget)
+zones, meta = planned_zones(total_budget, validation_budget, search_budget, market=market)
 history = load_campaign_history()
-measured = measured_area_performance(history)
+measured = measured_area_performance(history, market_city=market["label"])
 zones = join_measured_to_zones(zones, measured)
 measured_ready = not measured.empty and measured.get("observations", pd.Series(dtype=float)).sum() >= 4
 
 # Stable role colours. Plotly wants rgba strings.
 ROLE_COLORS = {
-    "Primary": (38, 196, 166),
+    "Venue / campus": (38, 196, 166),
     "Local": (72, 145, 245),
-    "U6": (139, 92, 246),
+    "Culture / university": (245, 158, 66),
     "Culture": (245, 158, 66),
+    "U6 corridor": (139, 92, 246),
+    "City centre": (38, 196, 166),
+    "University": (139, 92, 246),
+    "Residential": (72, 145, 245),
+    "Regional": (245, 158, 66),
+    "North catchment": (72, 145, 245),
+    "Work / residential": (139, 92, 246),
+    "Centre": (38, 196, 166),
+    "North": (72, 145, 245),
+    "South": (245, 158, 66),
 }
 
-k1, k2, k3 = st.columns(3)
+k0, k1, k2, k3 = st.columns(4)
+k0.metric("Selected market", market["label"])
 k1.metric("First geography test", f"EUR {meta['geo_budget']:.0f}")
 k2.metric("Balanced cells", "3 areas × 2 creatives")
 k3.metric("Held for later decisions", f"EUR {meta['total_budget']-meta['geo_budget']:.0f}")
@@ -128,7 +143,7 @@ with left:
     fig = go.Figure()
 
     # U6 accessibility corridor (planning aid, not a targeting polygon).
-    if show_u6:
+    if show_u6 and market.get("show_u6", False):
         u6 = u6_path_frame()
         fig.add_trace(
             go.Scattermap(
@@ -179,7 +194,7 @@ with left:
                 lat=[float(r["lat"])],
                 lon=[float(r["lon"])],
                 mode="markers+text" if show_labels else "markers",
-                marker=dict(size=16 if r["role"] == "Primary" else 13, color=f"rgb({rgb[0]},{rgb[1]},{rgb[2]})"),
+                marker=dict(size=16 if str(r["role"]).lower().startswith(("venue", "city centre", "centre")) else 13, color=f"rgb({rgb[0]},{rgb[1]},{rgb[2]})"),
                 text=[label_text],
                 textposition="top center",
                 textfont=dict(size=12, color="white" if basemap_name in {"Carto dark", "No tiles (fallback)"} else "#111827"),
@@ -198,27 +213,24 @@ with left:
             )
         )
 
-    # Exact ESO venue marker above all zones.
+    # Always show the screening destination, even when testing another city.
     fig.add_trace(
         go.Scattermap(
-            lat=[48.259828],
-            lon=[11.670136],
-            mode="markers+text",
-            marker=dict(size=20, color="white"),
-            text=["★ ESO Supernova"],
+            lat=[48.259828], lon=[11.670136], mode="markers+text",
+            marker=dict(size=18, color="white"), text=["★ ESO Supernova"],
             textposition="bottom center",
             textfont=dict(size=13, color="white" if basemap_name in {"Carto dark", "No tiles (fallback)"} else "#111827"),
-            hovertemplate="<b>ESO Supernova</b><br>Karl-Schwarzschild-Str. 2, Garching<br>Campaign destination / screening venue<extra></extra>",
-            name="ESO Supernova",
-            showlegend=False,
+            hovertemplate="<b>ESO Supernova</b><br>Karl-Schwarzschild-Str. 2, Garching<br>Screening venue — demand baseline remains ESO-specific<extra></extra>",
+            name="ESO Supernova", showlegend=False,
         )
     )
 
+    center = market.get("center", {"lat": 48.215, "lon": 11.625})
     fig.update_layout(
         map=dict(
             style=MAP_STYLE,
-            center=dict(lat=48.215, lon=11.625),
-            zoom=10.15,
+            center=dict(lat=float(center["lat"]), lon=float(center["lon"])),
+            zoom=10.25 if not market.get("custom") else 10.0,
         ),
         margin=dict(l=0, r=0, t=0, b=0),
         height=650,
@@ -229,7 +241,7 @@ with left:
     )
 
     st.plotly_chart(fig, width="stretch", config={"displaylogo": False, "scrollZoom": True})
-    st.caption("The circles are proposed paid-ad test radii. The U6 line is an accessibility signal, not a Meta targeting object. If tiles ever appear blank, choose another map background in the sidebar.")
+    st.caption(f"The circles are proposed paid-ad test radii for {market['label']}. The ESO star is the fixed screening venue. Transit lines are planning context only, not targeting objects.")
 
 with right:
     st.subheader("Exact first test")
@@ -259,7 +271,7 @@ allocation = pd.DataFrame(
     [
         ["Meta — first-wave zones", meta["geo_budget"], "Three geographies × two creatives"],
         ["Later age and retargeting tests", meta["later_tests"], "Conditional learning spend"],
-        ["Google Search", meta["search_budget"], "High-intent searches, Munich + Garching"],
+        ["Google Search", meta["search_budget"], f"High-intent searches, {meta['search_area']}"],
         ["Winner reserve", meta["scale_reserve"], "Move only to the measured best geo/audience/creative"],
     ],
     columns=["Bucket", "Budget €", "Purpose"],
