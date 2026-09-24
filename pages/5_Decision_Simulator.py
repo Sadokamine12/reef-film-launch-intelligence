@@ -78,7 +78,8 @@ m1.metric("No-paid base", f"{baseline[1]} tickets", f"{baseline[0]}-{baseline[2]
 m2.metric("Selected plan", f"{forecast[1]} tickets", f"{forecast[0]}-{forecast[2]}")
 m3.metric("Scenario lift", f"+{lift[1]} tickets", f"{lift[0]}-{lift[2]}")
 m4.metric("Spend released", f"EUR {spent}", f"EUR {held} held")
-m5.metric("Accessibility", market_meta["accessibility"], f"{market_meta['distance_to_venue_km']:.1f} km to ESO")
+access_delta = f"{market_meta['public_transport_min']:.0f} min public transport" if market_meta.get("public_transport_min") is not None else f"{market_meta['distance_to_venue_km']:.1f} km to ESO"
+m5.metric("Accessibility", market_meta["accessibility"], access_delta)
 
 st.markdown("## Outcome range")
 left, right = st.columns([1.7, 1], gap="large")
@@ -112,9 +113,12 @@ with d1:
     <p>{coverage["unique_shows"]} ESO comparable shows currently support the baseline.</p>
     <p>Nearest observation: {coverage["lead_min"]:.0f} days before show.</p></div>''', unsafe_allow_html=True)
 with d2:
-    st.markdown(f'''<div class="reef-card"><div class="reef-label">Market accessibility</div><h3>{market_meta["accessibility"]}</h3>
-    <p>{market_meta["distance_to_venue_km"]:.1f} km straight-line distance to ESO.</p>
-    <p>This adjusts the pre-campaign scenario only.</p></div>''', unsafe_allow_html=True)
+    travel_line = f'{market_meta["public_transport_min"]:.0f} min public transport to ESO' if market_meta.get("public_transport_min") is not None else f'{market_meta["distance_to_venue_km"]:.1f} km straight-line distance to ESO'
+    population_line = f'{market_meta["working_age_population_20_64"]:,} people age 20–64 ({market_meta["working_age_year"]})'.replace(",", " ") if market_meta.get("working_age_population_20_64") else "Working-age population not connected"
+    st.markdown(f'''<div class="reef-card"><div class="reef-label">Market context</div><h3>{market_meta["accessibility"]}</h3>
+    <p>{travel_line}</p>
+    <p>{population_line}</p>
+    <p>Population is context only; it does not inflate ticket lift without calibration.</p></div>''', unsafe_allow_html=True)
 with d3:
     st.markdown(f'''<div class="reef-card"><div class="reef-label">Marketing evidence</div><h3>{int(campaign.get("rows", 0))} ROWS</h3>
     <p>Ticket-lift model operational: <b>{"yes" if marketing.operational else "no"}</b>.</p>
@@ -150,6 +154,8 @@ for name, candidate in market_catalog(project).items():
     rows.append({
         "Market": name,
         "Accessibility": meta["accessibility"],
+        "Public transport (min)": int(round(meta["public_transport_min"])) if meta.get("public_transport_min") is not None else None,
+        "Working-age 20–64": meta.get("working_age_population_20_64"),
         "Distance to ESO (km)": meta["distance_to_venue_km"],
         "Released EUR": int(round(candidate_spend)),
         "Low": int(round(candidate_sim["total_tickets"].quantile(.10))),
@@ -169,8 +175,8 @@ except Exception:
     market_inputs = pd.DataFrame()
 selected_input = market_inputs[market_inputs["city"].eq(market["label"])] if (not market_inputs.empty and "city" in market_inputs.columns) else pd.DataFrame()
 evidence_fields = [
-    ("Adult population 20–60", "adult_population_20_60"),
-    ("Typical travel time", "avg_travel_time_min"),
+    ("Working-age population 20–64", "working_age_population_20_64"),
+    ("Public-transport time to ESO", "avg_public_transport_min"),
     ("Meta reachable audience", "meta_reachable_audience"),
     ("Google search demand", "google_search_index"),
     ("ESO visitor-origin share", "eso_visitor_origin_share"),
@@ -185,8 +191,21 @@ for label, field in evidence_fields:
     readiness.append({"Input": label, "Status": "CONNECTED" if value is not None else "NOT CONNECTED", "Value": value if value is not None else "—"})
 readiness_df = pd.DataFrame(readiness)
 connected = int((readiness_df["Status"] == "CONNECTED").sum())
-st.caption(f"{connected}/5 external market inputs connected for {market['label']}. The simulator does not invent missing population, audience or search-demand numbers.")
+st.caption(f"{connected}/5 external market inputs connected for {market['label']}. Public demographic and transit evidence is now sourced where available; Meta audience, Google demand and ESO visitor-origin data remain blank until real platform/venue data is supplied.")
 st.dataframe(readiness_df, hide_index=True, width="stretch")
+if not selected_input.empty:
+    row = selected_input.iloc[0]
+    source_rows = []
+    for label, source_field in [("Population", "population_source"), ("Travel time", "travel_source")]:
+        src = str(row.get(source_field, "") or "").strip()
+        if src and src.lower() != "nan":
+            source_rows.append({"Evidence": label, "Source": src})
+    if source_rows:
+        with st.expander("Sources for the connected market evidence"):
+            st.dataframe(pd.DataFrame(source_rows), hide_index=True, width="stretch")
+    note = str(row.get("notes", "") or "").strip()
+    if note and note.lower() != "nan":
+        st.caption(note)
 
 st.markdown("## What would make this forecast materially better?")
 n1, n2, n3 = st.columns(3)
@@ -202,7 +221,8 @@ with n3:
 
 with st.expander("Method and limitations"):
     st.markdown(f"""- The no-paid baseline is empirical ESO booking evidence, not the inactive demand ML candidate.
-- City accessibility is shown as **HIGH / MEDIUM / LOW** for management. The internal numeric factor is used only for scenario calculation and is not a measured city score.
+- City accessibility is shown as **HIGH / MEDIUM / LOW** for management. Where a sourced public-transport time is available and marked eligible, it replaces straight-line distance in the scenario friction prior. The internal factor remains an assumption, not a measured city score.
+- Sourced working-age population is displayed as market context only. It does not change ticket lift until campaign data can calibrate a relationship between audience pool and conversions.
 - Paid-media lift is not learned yet because campaign_history.csv has no usable controlled lift observations.
 - The requested budget is a ceiling. Before lift evidence exists, at most EUR {project['marketing']['experiment_budget_eur']} is released into the predefined learning plan.
 - Screening differences are calendar/campaign-maturity assumptions until Resolution-specific bookings provide real Tuesday pace.
