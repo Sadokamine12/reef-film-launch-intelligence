@@ -8,6 +8,7 @@ import streamlit as st
 from campaign_lab import CAMPAIGN_PATH, REQUIRED_IMPORT, append_observations, attribution_readiness, campaign_summary, import_campaign_csv
 from data_contracts import ensure_campaign_frame, read_csv_safe
 from training_engine import run_all_training
+from platform_import import normalize_platform_export
 from ui import apply_theme, editing_enabled, page_intro, select_market
 
 st.set_page_config(page_title="Campaign Data | REEF", page_icon="📥", layout="wide")
@@ -37,6 +38,28 @@ if not editing_enabled():
         with st.expander("Published campaign observations"):
             st.dataframe(history, hide_index=True, width="stretch")
     st.stop()
+
+st.markdown("## Fast import: Meta / Google export")
+st.caption("For standard provider exports, auto-normalize the common fields first. Platform purchase metrics stay diagnostic and are never treated as ticket lift automatically.")
+fast = st.file_uploader("Provider export CSV", type=["csv"], key="provider_export")
+provider = st.selectbox("Provider", ["Meta Ads", "Google Ads"], key="provider_type")
+if fast is not None:
+    try:
+        raw = pd.read_csv(fast)
+        default_area = market.get("search_area", market["label"])
+        normalized = normalize_platform_export(raw, provider, market["label"], default_area=default_area)
+        with st.expander("Normalized preview", expanded=True):
+            st.dataframe(normalized.head(20), hide_index=True, width="stretch")
+        if st.button("Validate and import normalized export", type="primary", key="fast_import"):
+            added, total, errors = import_campaign_csv(normalized)
+            if errors:
+                for message in errors:
+                    st.error(message)
+            else:
+                st.success(f"Imported {added} observations; campaign history now has {total} rows.")
+                st.rerun()
+    except Exception as exc:
+        st.error(f"Could not normalize this provider export: {exc}")
 
 st.markdown("## Import a platform CSV")
 st.caption("Upload a real daily export. Confirm the eight fields below; important fields are never silently guessed.")
