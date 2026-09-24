@@ -8,6 +8,7 @@ import streamlit as st
 from advanced_ml import empirical_baseline, hybrid_simulation, load_config as flat_config, load_marketing_model, per_show_forecast
 from campaign_lab import attribution_readiness, campaign_summary
 from market_context import market_catalog, market_prediction_context
+from external_sources import load_external_source_status, source_readiness_rows
 from model_quality import eso_coverage
 from project_config import load_config, total_capacity
 from ui import apply_theme, page_intro, select_market, INK, TEAL, BLUE
@@ -206,6 +207,14 @@ if not selected_input.empty:
     note = str(row.get("notes", "") or "").strip()
     if note and note.lower() != "nan":
         st.caption(note)
+
+st.markdown("## Live data connections")
+external_status = load_external_source_status()
+connection_rows = pd.DataFrame(source_readiness_rows(external_status))
+connection_rows["Ready"] = connection_rows["Ready"].map({True: "YES", False: "NO"})
+st.dataframe(connection_rows[["Source", "Ready", "Status", "Detail"]], hide_index=True, width="stretch")
+if not connection_rows["Ready"].eq("YES").all():
+    st.info("The simulator is ready to ingest real ad and booking evidence, but the missing external connections must be completed before the marketing models can learn from live data.")
 
 st.markdown("## What would make this forecast materially better?")
 n1, n2, n3 = st.columns(3)
