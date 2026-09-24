@@ -16,7 +16,7 @@ from eso_sales_tracker import is_cookie_privacy_only, parse_available_seats, ups
 from lightweight_ml import fit_bootstrap_ridge_ensemble, LightweightEnsemble
 from project_config import load_config
 from training_engine import _group_folds, generate_active_learning_plan
-from advanced_ml import optimize_budget
+from advanced_ml import optimize_budget, per_show_forecast
 from ad_targeting_map import planned_zones
 from experiment_protocol import build_experiment_plan
 from market_context import market_catalog, custom_market, market_prediction_context
@@ -147,6 +147,22 @@ class DataTests(unittest.TestCase):
             float(local_alloc["expected_extra_tickets"].sum()),
             float(freising_alloc["expected_extra_tickets"].sum()),
         )
+
+    def test_screening_forecast_is_differentiated_and_preserves_total(self):
+        cfg = load_config()
+        flat = {
+            "show_dates": list(cfg["screenings"]["dates"]),
+            "capacity_per_show": int(cfg["venue"]["capacity_per_show"]),
+            "screening_forecast": cfg["screening_forecast"],
+        }
+        sim = pd.DataFrame({"total_tickets": [196, 206, 216, 206, 206]})
+        shows = per_show_forecast(sim, flat)
+        self.assertEqual(len(shows), 4)
+        self.assertEqual(int(shows["base"].sum()), 206)
+        self.assertGreater(shows["base"].nunique(), 1)
+        self.assertEqual(shows["scenario_index"].tolist(), [96, 92, 108, 104])
+        self.assertTrue((shows["low"] <= shows["base"]).all())
+        self.assertTrue((shows["base"] <= shows["high"]).all())
 
     def test_no_sklearn_import_and_page_syntax(self):
         for path in [*Path(".").glob("*.py"), *Path("pages").glob("*.py")]:
