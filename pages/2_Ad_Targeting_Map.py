@@ -95,7 +95,7 @@ ROLE_COLORS = {
 
 k0, k1, k2, k3, k4 = st.columns(5)
 k0.metric("Selected market", market["label"])
-k1.metric("Access prior", f"{market_pred['scenario_index']}/100", f"{market_pred['distance_to_venue_km']:.1f} km to ESO")
+k1.metric("Accessibility", market_pred["accessibility"], f"{market_pred['distance_to_venue_km']:.1f} km to ESO")
 k2.metric("First geography test", f"EUR {meta['geo_budget']:.0f}")
 k3.metric("Balanced cells", "3 areas × 2 creatives")
 k4.metric("Held for later decisions", f"EUR {meta['total_budget']-meta['geo_budget']:.0f}")
