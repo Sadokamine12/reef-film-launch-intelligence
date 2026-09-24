@@ -1,3 +1,12 @@
+## Sourced market evidence layer
+
+- Populated all seven preset markets with public demographic context and public-transport evidence, including provenance URLs and method/year notes.
+- Added working-age 20–64 context for Munich, Garching core, Freising, Ismaning, Unterschleißheim, Erding and Dachau. Derived municipal values are explicitly marked as estimates where they use published total-population and total-quotient data.
+- Added public-transport times to ESO/Garching-Forschungszentrum; the mixed Garching / Munich North preset is flagged core-only and is not transit-model eligible.
+- Updated the city accessibility prior to prefer sourced, eligible public-transport time over straight-line distance.
+- Kept population out of ticket-lift math until real campaign evidence can calibrate it.
+- Left Meta reachable audience, Google search demand and ESO visitor-origin share blank instead of fabricating proprietary data.
+
 ## Management decision simulator and evidence simplification
 
 - Added a boss-facing Decision Simulator for city, budget and campaign-start what-if analysis.
