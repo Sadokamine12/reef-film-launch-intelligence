@@ -168,8 +168,16 @@ class DataTests(unittest.TestCase):
             self.assertIn(meta["accessibility"], {"HIGH", "MEDIUM", "LOW"})
             self.assertGreater(meta["distance_to_venue_km"], -0.1)
         evidence = pd.read_csv("data/market_evidence.csv")
-        self.assertTrue({"city", "adult_population_20_60", "avg_travel_time_min", "meta_reachable_audience", "google_search_index", "eso_visitor_origin_share"}.issubset(evidence.columns))
+        required = {"city", "working_age_population_20_64", "avg_public_transport_min", "travel_time_model_eligible", "meta_reachable_audience", "google_search_index", "eso_visitor_origin_share", "population_source", "travel_source"}
+        self.assertTrue(required.issubset(evidence.columns))
         self.assertEqual(set(markets.keys()), set(evidence["city"]))
+        self.assertGreaterEqual(int(evidence["working_age_population_20_64"].notna().sum()), 7)
+        self.assertGreaterEqual(int(evidence["avg_public_transport_min"].notna().sum()), 7)
+        self.assertTrue(evidence["population_source"].fillna("").str.startswith("http").all())
+        self.assertTrue(evidence["travel_source"].fillna("").str.startswith("http").all())
+        freising = market_prediction_context(markets["Freising"])
+        self.assertEqual(round(float(freising["public_transport_min"])), 23)
+        self.assertEqual(freising["working_age_population_20_64"], 32084)
 
     def test_no_sklearn_import_and_page_syntax(self):
         for path in [*Path(".").glob("*.py"), *Path("pages").glob("*.py")]:
