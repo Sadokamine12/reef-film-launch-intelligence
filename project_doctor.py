@@ -86,7 +86,8 @@ def run_checks() -> list[dict]:
         if item.get("model_path"):
             from lightweight_ml import LightweightEnsemble
             try:
-                model = LightweightEnsemble.load(item["model_path"])
+                model_path = Path(str(item["model_path"]).replace("\\", "/"))
+                model = LightweightEnsemble.load(model_path)
                 intact = bool(model.weights and len(model.weights[0]) == len(model.state.feature_names))
             except Exception:
                 intact = False
