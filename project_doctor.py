@@ -56,6 +56,14 @@ def run_checks() -> list[dict]:
     markets = market_catalog(cfg)
     market_ok = len(markets) >= 3 and all(len(m.get("zones", [])) >= 3 for m in markets.values())
     add("Target markets", market_ok, f"{len(markets)} preset cities; custom city supported", "warning")
+    market_evidence = read_csv_safe("data/market_evidence.csv")
+    market_fields = {"city", "adult_population_20_60", "avg_travel_time_min", "meta_reachable_audience", "google_search_index", "eso_visitor_origin_share"}
+    market_schema_ok = market_fields.issubset(market_evidence.columns)
+    connected_values = 0
+    if market_schema_ok and not market_evidence.empty:
+        for field in market_fields - {"city"}:
+            connected_values += int(market_evidence[field].notna().sum())
+    add("Market evidence inputs", market_schema_ok, f"{connected_values} external values connected; blanks are allowed and must not be fabricated", "warning")
     folders = ["config", "data", "models", "pages", "docs"]
     add("Folders", all(Path(p).is_dir() for p in folders), ", ".join(folders))
 

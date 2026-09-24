@@ -93,9 +93,9 @@ def main() -> None:
           <p><b>EUR 90 first wave:</b> predicted +{first_wave_lift[1]} tickets (low +{first_wave_lift[0]} · high +{first_wave_lift[2]}), for about <b>{first_wave_total[1]} total tickets</b>.</p>
           <p><b>EUR {planned_spend} learning plan:</b> predicted +{lift[1]} tickets, for about <b>{with_tests[1]} total tickets</b>.</p></div>''', unsafe_allow_html=True)
     with right:
-        st.markdown(f'''<div class="reef-card"><div class="reef-label">Market access prior</div><div class="reef-number">{market_pred["scenario_index"]}/100</div>
+        st.markdown(f'''<div class="reef-card"><div class="reef-label">Market accessibility</div><div class="reef-number">{market_pred["accessibility"]}</div>
           <p>{market_pred["distance_to_venue_km"]:.1f} km straight-line distance to ESO Supernova.</p>
-          <p>Used only to adjust the pre-campaign ticket-conversion scenario. It is <b>not measured city performance</b>.</p></div>''', unsafe_allow_html=True)
+          <p>Management band only. The underlying factor is a <b>planning assumption</b>, not measured city performance.</p></div>''', unsafe_allow_html=True)
     st.markdown(f'<div class="reef-cta"><strong>{market["label"]} scenario:</strong> EUR 90 first wave → +{first_wave_lift[1]} tickets; EUR {planned_spend} learning plan → +{lift[1]} tickets and about {with_tests[1]}/{capacity} total seats filled. Low/base/high total: {with_tests[0]} / {with_tests[1]} / {with_tests[2]}. <strong>Confidence remains low until real campaign and Resolution booking data arrive.</strong></div>', unsafe_allow_html=True)
 
     st.markdown('## Ticket outlook')
@@ -130,7 +130,7 @@ def main() -> None:
         comparison_rows.append({
             "Market": name,
             "Distance to ESO (km)": candidate_meta["distance_to_venue_km"],
-            "Access prior": candidate_meta["scenario_index"],
+            "Accessibility": candidate_meta["accessibility"],
             "EUR 90 predicted extra": int(round(candidate_wave["incremental_tickets"].median())),
             f"EUR {int(cfg['marketing']['experiment_budget_eur'])} predicted extra": int(round(candidate_plan["incremental_tickets"].median())),
             "Predicted total tickets": int(round(candidate_plan["total_tickets"].median())),
@@ -139,7 +139,7 @@ def main() -> None:
     import pandas as pd
     comparison_df = pd.DataFrame(comparison_rows)
     comparison_df["Selected"] = comparison_df["Market"].eq(market["label"]).map({True: "●", False: ""})
-    display_cols = ["Selected", "Market", "Distance to ESO (km)", "Access prior", "EUR 90 predicted extra", f"EUR {int(cfg['marketing']['experiment_budget_eur'])} predicted extra", "Predicted total tickets", "P(50% occupancy)"]
+    display_cols = ["Selected", "Market", "Accessibility", "Distance to ESO (km)", "EUR 90 predicted extra", f"EUR {int(cfg['marketing']['experiment_budget_eur'])} predicted extra", "Predicted total tickets", "P(50% occupancy)"]
     st.dataframe(
         comparison_df[display_cols].style.format({"Distance to ESO (km)": "{:.1f}", "P(50% occupancy)": "{:.0%}"}),
         hide_index=True, width="stretch",
@@ -198,7 +198,7 @@ def main() -> None:
                     f'Tuesday {day[8:10]} February',
                     str(int(row["base"])),
                     f'{row["occupancy_pct"]:.0f}% occupancy · low {int(row["low"])} · high {int(row["high"])}',
-                    f'<span class="reef-pill">Scenario index {int(row["scenario_index"])}</span><br><br>{row["scenario_driver"]}'
+                    f'<span class="reef-pill">{"STRONGER CASE" if int(row["scenario_index"]) >= 105 else "SOFTER CASE" if int(row["scenario_index"]) <= 95 else "NEAR BASELINE"}</span><br><br>{row["scenario_driver"]}'
                 ),
                 unsafe_allow_html=True,
             )
@@ -206,8 +206,8 @@ def main() -> None:
     with st.expander('Why the Tuesday forecasts differ'):
         for _, row in shows.iterrows():
             st.markdown(
-                f"**{row['show_date']} — index {int(row['scenario_index'])}:** {row['calendar_fact']}  \n"
-                f"*Scenario assumption:* {row['scenario_driver']}"
+                f"**{row['show_date']}:** {row['calendar_fact']}  \n"
+                f"*Scenario assumption:* {row['scenario_driver']} (internal factor {int(row['scenario_index'])}, shown here only for methodology)"
             )
         st.caption('The calendar facts are externally verifiable. The direction and size of each weight are modelling assumptions and will be replaced or updated once Resolution-specific sales pace exists.')
 
@@ -229,10 +229,10 @@ def main() -> None:
 - **Biggest risk:** no Resolution booking inventory and no comparable observations close to showtime.''')
 
     st.markdown('### Explore the details')
-    links = st.columns(4)
+    links = st.columns(5)
     for col, path, label in zip(links,
-        ['pages/1_Sales_Forecast.py', 'pages/2_Ad_Targeting_Map.py', 'pages/3_Campaign_Experiment.py', 'pages/7_Data_Health.py'],
-        ['Sales evidence →', 'Targeting map →', 'EUR 500 experiment →', 'Data health →']):
+        ['pages/1_Sales_Forecast.py', 'pages/2_Ad_Targeting_Map.py', 'pages/3_Campaign_Experiment.py', 'pages/5_Decision_Simulator.py', 'pages/7_Data_Health.py'],
+        ['Sales evidence →', 'Targeting map →', 'EUR 500 experiment →', 'Decision simulator →', 'Data health →']):
         with col:
             st.page_link(path, label=label)
 

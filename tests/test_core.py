@@ -161,6 +161,16 @@ class DataTests(unittest.TestCase):
         self.assertTrue((shows["low"] <= shows["base"]).all())
         self.assertTrue((shows["base"] <= shows["high"]).all())
 
+    def test_manager_accessibility_band_and_market_evidence_template(self):
+        markets = market_catalog()
+        for market in markets.values():
+            meta = market_prediction_context(market)
+            self.assertIn(meta["accessibility"], {"HIGH", "MEDIUM", "LOW"})
+            self.assertGreater(meta["distance_to_venue_km"], -0.1)
+        evidence = pd.read_csv("data/market_evidence.csv")
+        self.assertTrue({"city", "adult_population_20_60", "avg_travel_time_min", "meta_reachable_audience", "google_search_index", "eso_visitor_origin_share"}.issubset(evidence.columns))
+        self.assertEqual(set(markets.keys()), set(evidence["city"]))
+
     def test_no_sklearn_import_and_page_syntax(self):
         for path in [*Path(".").glob("*.py"), *Path("pages").glob("*.py")]:
             tree = ast.parse(path.read_text(encoding="utf-8"))

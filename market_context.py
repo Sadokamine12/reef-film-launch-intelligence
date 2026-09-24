@@ -203,10 +203,17 @@ def market_prediction_context(market: dict, cfg: dict | None = None) -> dict:
     if market.get("show_u6", False):
         factor *= 1.05
     factor = max(0.55, min(1.05, factor))
+    if factor >= 0.93:
+        accessibility = "HIGH"
+    elif factor >= 0.78:
+        accessibility = "MEDIUM"
+    else:
+        accessibility = "LOW"
     return {
         "market": str(market.get("label", "Selected city")),
         "distance_to_venue_km": round(km, 1),
         "scenario_factor": float(factor),
         "scenario_index": int(round(factor * 100)),
+        "accessibility": accessibility,
         "basis": "Access-adjusted planning prior; not measured city performance",
     }
