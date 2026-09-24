@@ -162,6 +162,32 @@ market_df = pd.DataFrame(rows)
 market_df.insert(0, "Selected", market_df["Market"].eq(market["label"]).map({True: "●", False: ""}))
 st.dataframe(market_df, hide_index=True, width="stretch")
 
+st.markdown("## Market evidence readiness")
+try:
+    market_inputs = pd.read_csv("data/market_evidence.csv")
+except Exception:
+    market_inputs = pd.DataFrame()
+selected_input = market_inputs[market_inputs["city"].eq(market["label"])] if (not market_inputs.empty and "city" in market_inputs.columns) else pd.DataFrame()
+evidence_fields = [
+    ("Adult population 20–60", "adult_population_20_60"),
+    ("Typical travel time", "avg_travel_time_min"),
+    ("Meta reachable audience", "meta_reachable_audience"),
+    ("Google search demand", "google_search_index"),
+    ("ESO visitor-origin share", "eso_visitor_origin_share"),
+]
+readiness = []
+for label, field in evidence_fields:
+    value = None
+    if not selected_input.empty and field in selected_input.columns:
+        raw = selected_input.iloc[0][field]
+        if pd.notna(raw) and str(raw).strip() != "":
+            value = raw
+    readiness.append({"Input": label, "Status": "CONNECTED" if value is not None else "NOT CONNECTED", "Value": value if value is not None else "—"})
+readiness_df = pd.DataFrame(readiness)
+connected = int((readiness_df["Status"] == "CONNECTED").sum())
+st.caption(f"{connected}/5 external market inputs connected for {market['label']}. The simulator does not invent missing population, audience or search-demand numbers.")
+st.dataframe(readiness_df, hide_index=True, width="stretch")
+
 st.markdown("## What would make this forecast materially better?")
 n1, n2, n3 = st.columns(3)
 with n1:
