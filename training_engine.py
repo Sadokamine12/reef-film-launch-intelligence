@@ -201,7 +201,7 @@ def train_eso_demand_model(path: str | Path = "data/eso_comparable_snapshots.csv
     return TrainResult(
         "ESO demand model", status, len(df), target="sold_pct", features=features,
         mae=mae, mae_seats=mae_seats, rmse_pp=rmse_pp, r2=r2, benchmark_mae=bmae, benchmark_r2=br2,
-        validation_mode=validation_mode, model_path=str(out), operational=operational, notes=notes,
+        validation_mode=validation_mode, model_path=out.as_posix(), operational=operational, notes=notes,
     )
 
 
