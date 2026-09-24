@@ -31,7 +31,7 @@ capacity = int(cfg["capacity_per_show"]) * len(cfg["show_dates"])
 
 market_meta = market_prediction_context(market, full)
 if not marketing.operational:
-    st.warning(f"Paid ticket lift has no controlled labels. {market['label']} currently uses an access-adjusted planning prior ({market_meta['scenario_index']}/100; {market_meta['distance_to_venue_km']:.1f} km to ESO). Within the city, areas/creatives remain unproven until campaign data arrives.")
+    st.warning(f"Paid ticket lift has no controlled labels. {market['label']} currently uses a {market_meta['accessibility']} accessibility planning band ({market_meta['distance_to_venue_km']:.1f} km to ESO). Within the city, areas/creatives remain unproven until campaign data arrives.")
 
 with st.expander("Change scenario inputs"):
     budget = st.slider("Maximum campaign budget (EUR)", 0, 1000, int(cfg["budget_eur"]), 25)
@@ -46,7 +46,7 @@ baseline_mid = round(float(baseline["total_tickets"].median()))
 lift_mid = round(float(sim["incremental_tickets"].median()))
 
 cols = st.columns(5)
-cols[0].metric("Selected market", market["label"], f"Access prior {market_meta['scenario_index']}/100")
+cols[0].metric("Selected market", market["label"], f"Accessibility {market_meta['accessibility']}")
 cols[1].metric("No-paid estimate", f"{baseline_mid} tickets")
 cols[2].metric("With planned tests", f"{middle} tickets")
 cols[3].metric("Predicted extra", f"+{lift_mid} tickets")
