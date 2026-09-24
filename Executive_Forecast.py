@@ -205,8 +205,10 @@ def main() -> None:
 
     with st.expander('Why the Tuesday forecasts differ'):
         for _, row in shows.iterrows():
-            st.markdown(f"**{row['show_date']} — index {int(row['scenario_index'])}:** {row['calendar_fact']}  
-*Scenario assumption:* {row['scenario_driver']}")
+            st.markdown(
+                f"**{row['show_date']} — index {int(row['scenario_index'])}:** {row['calendar_fact']}  \n"
+                f"*Scenario assumption:* {row['scenario_driver']}"
+            )
         st.caption('The calendar facts are externally verifiable. The direction and size of each weight are modelling assumptions and will be replaced or updated once Resolution-specific sales pace exists.')
 
     st.markdown('## What changes the decision')
