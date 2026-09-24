@@ -64,8 +64,8 @@ def main() -> None:
     coverage, eso_model = eso_coverage(), current_eso_model()
     attribution, campaign = attribution_readiness(), campaign_summary()
     confidence = confidence_summary(coverage, eso_model, attribution)
-    no_paid_sim, _ = hybrid_simulation(0, model=model, cfg=flat, emp_stats=empirical, n=8000)
-    plan_sim, allocation = hybrid_simulation(cfg["marketing"]["total_budget_eur"], model=model, cfg=flat, emp_stats=empirical, n=8000)
+    no_paid_sim, _ = hybrid_simulation(0, model=model, cfg=flat, emp_stats=empirical, n=8000, market=market)
+    plan_sim, allocation = hybrid_simulation(cfg["marketing"]["total_budget_eur"], model=model, cfg=flat, emp_stats=empirical, n=8000, market=market)
     no_paid, with_tests, lift = (interval(s) for s in (no_paid_sim["total_tickets"], plan_sim["total_tickets"], plan_sim["incremental_tickets"]))
     planned_spend = int(allocation["budget_eur"].sum()) if not allocation.empty else 0
     reserve = int(cfg["marketing"]["total_budget_eur"] - planned_spend)
