@@ -271,6 +271,47 @@ def _baseline_params(cfg: dict, emp_stats: dict) -> tuple[float, float]:
     return float(np.clip(fill, 0.05, 0.95)), float(np.clip(unc, 0.12, 0.50))
 
 
+def _screening_prior(cfg: dict, dates: list[str]) -> tuple[np.ndarray, dict]:
+    block = cfg.get("screening_forecast", {}) or {}
+    shows = block.get("shows", {}) or {}
+    raw = []
+    for d in dates:
+        item = shows.get(str(d), {}) or {}
+        try:
+            value = float(item.get("weight", DATE_WEIGHTS.get(str(d), 1.0)))
+        except (TypeError, ValueError):
+            value = 1.0
+        raw.append(value if value > 0 else 1.0)
+    weights = np.asarray(raw, dtype=float)
+    if len(weights) and float(weights.sum()) > 0:
+        weights = weights / weights.mean()
+    return weights, block
+
+
+def _allocate_integer_total(total: int, weights: np.ndarray, capacity: int) -> list[int]:
+    """Allocate an integer series total across shows while preserving the total."""
+    n = len(weights)
+    if n == 0:
+        return []
+    total = max(0, min(int(total), int(capacity) * n))
+    shares = np.asarray(weights, dtype=float)
+    shares = np.where(shares > 0, shares, 1.0)
+    shares = shares / shares.sum()
+    targets = shares * total
+    allocated = np.minimum(np.floor(targets).astype(int), int(capacity))
+    remaining = int(total - allocated.sum())
+    while remaining > 0:
+        candidates = [i for i in range(n) if allocated[i] < capacity]
+        if not candidates:
+            break
+        # Largest unmet target first; if every target is already met because of
+        # capacity clipping, continue with the largest share that still has room.
+        best = max(candidates, key=lambda i: (targets[i] - allocated[i], shares[i], -i))
+        allocated[best] += 1
+        remaining -= 1
+    return allocated.tolist()
+
+
 def hybrid_simulation(budget: float, model: Optional[MarketingModelBundle] = None, cfg: Optional[dict] = None, emp_stats: Optional[dict] = None, days_to_event: int = 30, n: int = 10000, seed: int = 42, market: dict | None = None) -> tuple[pd.DataFrame, pd.DataFrame]:
     model = model or load_marketing_model()
     cfg = cfg or load_config()
@@ -286,9 +327,7 @@ def hybrid_simulation(budget: float, model: Optional[MarketingModelBundle] = Non
     else:
         lift_sd = max(5.0, expected_lift * 0.50)
     rng = np.random.default_rng(seed)
-    weights = np.array([DATE_WEIGHTS.get(str(d), 1.0) for d in dates], dtype=float)
-    if len(weights):
-        weights = weights / weights.mean()
+    weights, _ = _screening_prior(cfg, list(dates))
     rows = []
     for _ in range(n):
         baseline_by_show = []
@@ -331,14 +370,35 @@ def budget_forecast_curve(max_budget: int = 1000, step: int = 50, model: Optiona
 
 
 def per_show_forecast(sim: pd.DataFrame, cfg: dict) -> pd.DataFrame:
-    dates = cfg.get("show_dates", [])
-    capacity = int(cfg.get("capacity_per_show", 109))
-    weights = np.array([DATE_WEIGHTS.get(str(d), 1.0) for d in dates], dtype=float)
-    weights = weights / weights.sum() if len(weights) else weights
-    q10, q50, q90 = [float(sim["total_tickets"].quantile(q)) for q in (0.10, 0.50, 0.90)]
+    dates = list(cfg.get("show_dates", []) or cfg.get("screenings", {}).get("dates", []))
+    capacity = int(cfg.get("capacity_per_show", cfg.get("venue", {}).get("capacity_per_show", 109)))
+    weights_mean, block = _screening_prior(cfg, dates)
+    if len(weights_mean) == 0:
+        return pd.DataFrame()
+    weights_share = weights_mean / weights_mean.sum()
+    totals = [int(round(float(sim["total_tickets"].quantile(q)))) for q in (0.10, 0.50, 0.90)]
+    lows = _allocate_integer_total(totals[0], weights_mean, capacity)
+    bases = _allocate_integer_total(totals[1], weights_mean, capacity)
+    highs = _allocate_integer_total(totals[2], weights_mean, capacity)
+    shows = block.get("shows", {}) or {}
     rows = []
-    for d, w in zip(dates, weights):
-        rows.append({"show_date": d, "low": min(capacity, round(q10 * w)), "base": min(capacity, round(q50 * w)), "high": min(capacity, round(q90 * w))})
+    for i, d in enumerate(dates):
+        item = shows.get(str(d), {}) or {}
+        low = min(lows[i], bases[i])
+        base = bases[i]
+        high = max(highs[i], base)
+        rows.append({
+            "show_date": str(d),
+            "low": int(low),
+            "base": int(base),
+            "high": int(high),
+            "occupancy_pct": round(100.0 * base / max(1, capacity), 1),
+            "scenario_index": int(round(float(weights_mean[i]) * 100)),
+            "share_pct": round(float(weights_share[i]) * 100, 1),
+            "calendar_fact": str(item.get("calendar_fact", "")),
+            "scenario_driver": str(item.get("scenario_driver", "")),
+            "basis": str(block.get("status", "scenario prior")),
+        })
     return pd.DataFrame(rows)
 
 
