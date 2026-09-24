@@ -33,7 +33,9 @@ No real campaign rows, controlled incremental ticket labels, or public Resolutio
 
 ## EUR 500 experiment
 
-The precommitted learning plan totals EUR 240: EUR 90 for three geographies × two creatives, EUR 80 for age refinement in the strongest measured geographies, EUR 40 for search, and EUR 30 for retargeting if an audience exists. EUR 260 remains uncommitted for scaling. Run a no-paid Resolution baseline before the first paid wave. The reserve may remain unspent if marginal evidence is weak.
+The boss can choose the paid-media **target market city** from the dashboard sidebar. The selected city updates the targeting map, first-wave areas, campaign experiment and campaign-data tagging while the screening venue and ESO empirical demand baseline remain fixed in Garching. Built-in presets include Garching / Munich North, Munich, Freising, Ismaning, Unterschleißheim, Erding and Dachau, plus a custom-city mode.
+
+The precommitted learning plan totals EUR 240: EUR 90 for three geographies × two creatives in the selected city, EUR 80 for age refinement in the strongest measured geographies, EUR 40 for search, and EUR 30 for retargeting if an audience exists. EUR 260 remains uncommitted for scaling. Run a no-paid Resolution baseline before the first paid wave. The reserve may remain unspent if marginal evidence is weak.
 
 ## Required external inputs
 
