@@ -26,3 +26,10 @@ The project now separates the **series total forecast** from the **screening all
 Calendar facts used as context: TUM and LMU Wintersemester 2026/27 lecture periods end on 5 February 2027; Bavaria's spring school holidays run 8–12 February 2027. The code treats campaign maturity, holiday/local-presence risk and final-show urgency as **scenario assumptions**, not measured causal effects. Once Resolution booking URLs produce repeated per-show observations, those priors should be updated or superseded by actual pace.
 
 Sources: https://www.km.bayern.de/termine/ferien-und-feiertage ; https://www.tum.de/studium/bewerbung/infoportal-bewerbung/termine-und-fristen ; https://www.lmu.de/de/workspace-fuer-studierende/1x1-des-studiums/vorlesungszeiten/
+
+
+## Management Decision Simulator
+
+`pages/5_Decision_Simulator.py` is the management-facing what-if layer. It combines the empirical ESO baseline with the selected market, budget ceiling and campaign start timing, while keeping provenance visible. Baseline outputs are labelled empirical; paid lift and city effects stay scenario/assumption until real evidence exists. The page deliberately shows market accessibility as HIGH / MEDIUM / LOW and keeps the internal numeric factor out of the main management view.
+
+External market-strength inputs belong in `data/market_evidence.csv`. The schema includes adult population 20–60, typical travel time, Meta reachable audience, Google search demand and ESO visitor-origin share plus source metadata. Blank fields are valid and must remain blank until sourced; they are never auto-filled with fabricated values.
