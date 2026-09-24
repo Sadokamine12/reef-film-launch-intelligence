@@ -64,6 +64,8 @@ if upload is not None:
                 st.error("Map every required field to a different CSV column.")
             else:
                 prepared = source.rename(columns={original: field for field, original in mapped.items()})
+                if "city" not in prepared.columns or prepared["city"].fillna("").astype(str).str.strip().eq("").all():
+                    prepared["city"] = market["label"]
                 added, total, errors = import_campaign_csv(prepared)
                 if errors:
                     for message in errors:
