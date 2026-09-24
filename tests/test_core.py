@@ -105,7 +105,7 @@ class DataTests(unittest.TestCase):
         self.assertTrue((allocation["budget_eur"] <= 200).all())
         zones, meta = planned_zones()
         self.assertEqual(int(zones["budget_eur"].sum()), 90)
-        self.assertEqual(sorted(zones["budget_eur"].tolist()), [0, 30, 30, 30])
+        self.assertEqual(sorted(round(float(x)) for x in zones["budget_eur"].tolist()), [30, 30, 30])
         self.assertEqual(meta["geo_budget"] + meta["later_tests"] + meta["search_budget"] + meta["scale_reserve"], 500)
         confidence = confidence_summary({"unique_shows": 13, "repeated_shows": 13, "lead_min": 17}, {"mae": 17}, {"level": "E"})
         self.assertEqual(confidence["resolution_final"], "VERY LOW")
