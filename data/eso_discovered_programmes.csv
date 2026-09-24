@@ -1,0 +1,45 @@
+collected_at_utc,programme_title,programme_url,ticket_price_eur,duration_min,minimum_age,showings_found,status
+2026-09-23T10:39:32.580813+00:00,Unsere Verwendung von Cookies,https://supernova.eso.org/germany/programme/detail/es1007?lang=de,,,,0,no_showings_found
+2026-09-23T10:39:32.792483+00:00,Unsere Verwendung von Cookies,https://supernova.eso.org/germany/programme/detail/es1185?lang=de,,,,0,no_showings_found
+2026-09-23T10:39:33.033197+00:00,Unsere Verwendung von Cookies,https://supernova.eso.org/programme/detail/es1246/,,,,0,no_showings_found
+2026-09-23T10:39:33.288215+00:00,Unsere Verwendung von Cookies,https://supernova.eso.org/programme/detail/es1180-de/,,,,0,no_showings_found
+2026-09-23T10:43:02.633284+00:00,Was sind Cookies?,https://supernova.eso.org/germany/programme/detail/es1007?lang=de,6.5,60,7,browser,5,ok
+2026-09-23T10:43:04.502968+00:00,Was sind Cookies?,https://supernova.eso.org/germany/programme/detail/es1185?lang=de,6.5,50,8,browser,3,ok
+2026-09-23T10:43:06.165249+00:00,,https://supernova.eso.org/germany/programme/detail/es1246/?lang=de,,,,failed,0,error: requests returned cookie/privacy page or no programme markers; browser fallback failed: rendered DOM still contained no programme markers
+2026-09-23T10:43:07.928096+00:00,Was sind Cookies?,https://supernova.eso.org/germany/programme/detail/es1180-de/?lang=de,6.5,50,12,browser,1,ok
+2026-09-23T10:49:16.963383+00:00,Kategorien der von uns verwendeten Cookies,https://supernova.eso.org/germany/programme/detail/es1007?lang=de,6.5,60,7,selenium,5,ok
+2026-09-23T10:49:25.615984+00:00,Kategorien der von uns verwendeten Cookies,https://supernova.eso.org/germany/programme/detail/es1185?lang=de,6.5,50,8,selenium,3,ok
+2026-09-23T10:49:34.935084+00:00,,https://supernova.eso.org/germany/programme/detail/es1246/?lang=de,,,,failed,0,error: requests: cookie/privacy page only; selenium: cookie/privacy page only; browser-dump: cookie/privacy page only
+2026-09-23T10:49:42.913801+00:00,Kategorien der von uns verwendeten Cookies,https://supernova.eso.org/germany/programme/detail/es1180-de/?lang=de,6.5,50,12,selenium,1,ok
+2026-09-23T11:06:41.872565+00:00,Weitere Informationen,https://supernova.eso.org/germany/programme/detail/es1007?lang=de,6.5,60,7,selenium,5,ok
+2026-09-23T11:06:49.816980+00:00,Weitere Informationen,https://supernova.eso.org/germany/programme/detail/es1185?lang=de,6.5,50,8,selenium,3,ok
+2026-09-23T11:06:59.185864+00:00,,https://supernova.eso.org/germany/programme/detail/es1246/?lang=de,,,,failed,0,error: requests: cookie/privacy page only; selenium: cookie/privacy page only; browser-dump: cookie/privacy page only
+2026-09-23T11:07:07.119972+00:00,Weitere Informationen,https://supernova.eso.org/germany/programme/detail/es1180-de/?lang=de,6.5,50,12,selenium,1,ok
+2026-09-23T11:16:55.643977+00:00,Weitere Informationen,https://supernova.eso.org/germany/programme/detail/es1007?lang=de,6.5,60,7,selenium,5,ok
+2026-09-23T11:17:03.685664+00:00,Weitere Informationen,https://supernova.eso.org/germany/programme/detail/es1185?lang=de,6.5,50,8,selenium,3,ok
+2026-09-23T11:17:13.005688+00:00,,https://supernova.eso.org/germany/programme/detail/es1246/?lang=de,,,,failed,0,error: requests: cookie/privacy page only; selenium: cookie/privacy page only; browser-dump: cookie/privacy page only
+2026-09-23T11:17:20.967915+00:00,Weitere Informationen,https://supernova.eso.org/germany/programme/detail/es1180-de/?lang=de,6.5,50,12,selenium,1,ok
+2026-09-23T11:22:51.888337+00:00,Unknown programme,https://supernova.eso.org/germany/programme/detail/es1007?lang=de,,,,selenium,5,discovery_only
+2026-09-23T11:22:59.701590+00:00,Unknown programme,https://supernova.eso.org/germany/programme/detail/es1185?lang=de,,,,selenium,3,discovery_only
+2026-09-23T11:23:09.119126+00:00,,https://supernova.eso.org/germany/programme/detail/es1246/?lang=de,,,,failed,0,error: requests: cookie/privacy page only; selenium: cookie/privacy page only; browser-dump: cookie/privacy page only
+2026-09-23T11:23:17.117841+00:00,Unknown programme,https://supernova.eso.org/germany/programme/detail/es1180-de/?lang=de,,,,selenium,1,discovery_only
+2026-09-23T11:34:03.851104+00:00,Unknown programme,https://supernova.eso.org/germany/programme/detail/es1007?lang=de,,,,selenium,5,discovery_only
+2026-09-23T11:34:11.809441+00:00,Unknown programme,https://supernova.eso.org/germany/programme/detail/es1185?lang=de,,,,selenium,3,discovery_only
+2026-09-23T11:34:21.167949+00:00,,https://supernova.eso.org/germany/programme/detail/es1246/?lang=de,,,,failed,0,error: requests: cookie/privacy page only; selenium: cookie/privacy page only; browser-dump: cookie/privacy page only
+2026-09-23T11:34:29.093914+00:00,Unknown programme,https://supernova.eso.org/germany/programme/detail/es1180-de/?lang=de,,,,selenium,1,discovery_only
+2026-09-24T07:15:20.881577+00:00,Unknown programme,https://supernova.eso.org/germany/programme/detail/es1007?lang=de,,,,selenium,5,discovery_only
+2026-09-24T07:15:28.820662+00:00,Unknown programme,https://supernova.eso.org/germany/programme/detail/es1185?lang=de,,,,selenium,3,discovery_only
+2026-09-24T07:15:38.308874+00:00,,https://supernova.eso.org/germany/programme/detail/es1246/?lang=de,,,,failed,0,error: requests: cookie/privacy page only; selenium: cookie/privacy page only; browser-dump: cookie/privacy page only
+2026-09-24T07:15:46.252929+00:00,Unknown programme,https://supernova.eso.org/germany/programme/detail/es1180-de/?lang=de,,,,selenium,1,discovery_only
+2026-09-24T08:08:56.345614+00:00,Unknown programme,https://supernova.eso.org/germany/programme/detail/es1007?lang=de,,,,selenium,5,discovery_only
+2026-09-24T08:09:04.242874+00:00,Unknown programme,https://supernova.eso.org/germany/programme/detail/es1185?lang=de,,,,selenium,3,discovery_only
+2026-09-24T08:09:13.576804+00:00,,https://supernova.eso.org/germany/programme/detail/es1246/?lang=de,,,,failed,0,error: requests: cookie/privacy page only; selenium: cookie/privacy page only; browser-dump: cookie/privacy page only
+2026-09-24T08:09:21.628363+00:00,Unknown programme,https://supernova.eso.org/germany/programme/detail/es1180-de/?lang=de,,,,selenium,1,discovery_only
+2026-09-24T08:22:21.066018+00:00,Unknown programme,https://supernova.eso.org/germany/programme/detail/es1007?lang=de,,,,selenium,5,discovery_only
+2026-09-24T08:22:34.135917+00:00,Unknown programme,https://supernova.eso.org/germany/programme/detail/es1185?lang=de,,,,selenium,3,discovery_only
+2026-09-24T08:22:44.599307+00:00,,https://supernova.eso.org/germany/programme/detail/es1246/?lang=de,,,,failed,0,error: requests: cookie/privacy page only; selenium: cookie/privacy page only; browser-dump: cookie/privacy page only
+2026-09-24T08:22:52.615975+00:00,Unknown programme,https://supernova.eso.org/germany/programme/detail/es1180-de/?lang=de,,,,selenium,1,discovery_only
+2026-09-24T08:29:26.877700+00:00,Unknown programme,https://supernova.eso.org/germany/programme/detail/es1007?lang=de,,,,selenium,5,discovery_only
+2026-09-24T08:29:35.074544+00:00,Unknown programme,https://supernova.eso.org/germany/programme/detail/es1185?lang=de,,,,selenium,3,discovery_only
+2026-09-24T08:29:44.748086+00:00,,https://supernova.eso.org/germany/programme/detail/es1246/?lang=de,,,,failed,0,error: requests: cookie/privacy page only; selenium: cookie/privacy page only; browser-dump: cookie/privacy page only
+2026-09-24T08:29:52.659501+00:00,Unknown programme,https://supernova.eso.org/germany/programme/detail/es1180-de/?lang=de,,,,selenium,1,discovery_only

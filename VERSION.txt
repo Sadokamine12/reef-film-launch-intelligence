@@ -1,0 +1,4 @@
+REEF Film Launch Intelligence V11 Professional
+Built: 2026-09-24
+Project: Resolution @ ESO Supernova — February 2027
+Architecture: consolidated / Windows-safe / no scikit-learn

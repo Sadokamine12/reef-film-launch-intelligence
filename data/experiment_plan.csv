@@ -1,0 +1,14 @@
+step,wave,dependency,channel,area,age_band,creative,planned_spend_eur,duration_days,purpose,control_group
+W0,Baseline,Tickets live,No paid media,All,20-60,None,0,2,Measure pre-campaign Resolution sales velocity,yes
+W1-01,Geo + creative,After baseline window,Meta,ESO / Forschungszentrum,20-60,SXSW proof,15,3,Learn geography and creative engagement,no
+W1-02,Geo + creative,After baseline window,Meta,ESO / Forschungszentrum,20-60,Music + 360 experience,15,3,Learn geography and creative engagement,no
+W1-03,Geo + creative,After baseline window,Meta,Garching / Hochbrueck,20-60,SXSW proof,15,3,Learn geography and creative engagement,no
+W1-04,Geo + creative,After baseline window,Meta,Garching / Hochbrueck,20-60,Music + 360 experience,15,3,Learn geography and creative engagement,no
+W1-05,Geo + creative,After baseline window,Meta,Universitaet / Schwabing,20-60,SXSW proof,15,3,Learn geography and creative engagement,no
+W1-06,Geo + creative,After baseline window,Meta,Universitaet / Schwabing,20-60,Music + 360 experience,15,3,Learn geography and creative engagement,no
+W2-07,Age refinement,Use top 2 W1 geos + winning creative,Meta,WINNER_GEO_1,20-34,WINNER_CREATIVE,20,3,Learn age response without fragmenting Wave 1,no
+W2-08,Age refinement,Use top 2 W1 geos + winning creative,Meta,WINNER_GEO_1,35-60,WINNER_CREATIVE,20,3,Learn age response without fragmenting Wave 1,no
+W2-09,Age refinement,Use top 2 W1 geos + winning creative,Meta,WINNER_GEO_2,20-34,WINNER_CREATIVE,20,3,Learn age response without fragmenting Wave 1,no
+W2-10,Age refinement,Use top 2 W1 geos + winning creative,Meta,WINNER_GEO_2,35-60,WINNER_CREATIVE,20,3,Learn age response without fragmenting Wave 1,no
+W3-SEARCH,Intent,Ticket landing page live,Google Search,Munich + Garching,20-60,High-intent text,40,4,Compare high-intent search against Meta,no
+W3-RET,Retargeting,Only if retargeting pool is large enough,Retargeting,Prior site/video visitors,20-60,Scarcity / next Tuesday,30,4,Measure warm-audience efficiency,no

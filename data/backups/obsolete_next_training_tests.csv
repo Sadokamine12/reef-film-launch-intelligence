@@ -1,0 +1,25 @@
+test_id,wave,channel,area,age_band,creative,planned_spend_eur,days_to_event,primary_label,keep_separate
+T01,Wave 1,Meta,ESO / Forschungszentrum,20-34,SXSW proof,10.0,35,tickets_attributed when booking is live; otherwise landing_page_views,yes
+T02,Wave 1,Meta,ESO / Forschungszentrum,20-34,Music + 360 experience,10.0,35,tickets_attributed when booking is live; otherwise landing_page_views,yes
+T03,Wave 1,Meta,ESO / Forschungszentrum,35-60,SXSW proof,10.0,35,tickets_attributed when booking is live; otherwise landing_page_views,yes
+T04,Wave 1,Meta,ESO / Forschungszentrum,35-60,Music + 360 experience,10.0,35,tickets_attributed when booking is live; otherwise landing_page_views,yes
+T05,Wave 1,Meta,Garching / Hochbrueck,20-34,SXSW proof,10.0,35,tickets_attributed when booking is live; otherwise landing_page_views,yes
+T06,Wave 1,Meta,Garching / Hochbrueck,20-34,Music + 360 experience,10.0,35,tickets_attributed when booking is live; otherwise landing_page_views,yes
+T07,Wave 1,Meta,Garching / Hochbrueck,35-60,SXSW proof,10.0,35,tickets_attributed when booking is live; otherwise landing_page_views,yes
+T08,Wave 1,Meta,Garching / Hochbrueck,35-60,Music + 360 experience,10.0,35,tickets_attributed when booking is live; otherwise landing_page_views,yes
+T09,Wave 1,Meta,Universitaet / Schwabing,20-34,SXSW proof,10.0,35,tickets_attributed when booking is live; otherwise landing_page_views,yes
+T10,Wave 1,Meta,Universitaet / Schwabing,20-34,Music + 360 experience,10.0,35,tickets_attributed when booking is live; otherwise landing_page_views,yes
+T11,Wave 1,Meta,Universitaet / Schwabing,35-60,SXSW proof,10.0,35,tickets_attributed when booking is live; otherwise landing_page_views,yes
+T12,Wave 1,Meta,Universitaet / Schwabing,35-60,Music + 360 experience,10.0,35,tickets_attributed when booking is live; otherwise landing_page_views,yes
+T13,Wave 2,Meta,ESO / Forschungszentrum,20-34,SXSW proof,10.0,28,tickets_attributed when booking is live; otherwise landing_page_views,yes
+T14,Wave 2,Meta,ESO / Forschungszentrum,20-34,Music + 360 experience,10.0,28,tickets_attributed when booking is live; otherwise landing_page_views,yes
+T15,Wave 2,Meta,ESO / Forschungszentrum,35-60,SXSW proof,10.0,28,tickets_attributed when booking is live; otherwise landing_page_views,yes
+T16,Wave 2,Meta,ESO / Forschungszentrum,35-60,Music + 360 experience,10.0,28,tickets_attributed when booking is live; otherwise landing_page_views,yes
+T17,Wave 2,Meta,Garching / Hochbrueck,20-34,SXSW proof,10.0,28,tickets_attributed when booking is live; otherwise landing_page_views,yes
+T18,Wave 2,Meta,Garching / Hochbrueck,20-34,Music + 360 experience,10.0,28,tickets_attributed when booking is live; otherwise landing_page_views,yes
+T19,Wave 2,Meta,Garching / Hochbrueck,35-60,SXSW proof,10.0,28,tickets_attributed when booking is live; otherwise landing_page_views,yes
+T20,Wave 2,Meta,Garching / Hochbrueck,35-60,Music + 360 experience,10.0,28,tickets_attributed when booking is live; otherwise landing_page_views,yes
+T21,Wave 2,Meta,Universitaet / Schwabing,20-34,SXSW proof,10.0,28,tickets_attributed when booking is live; otherwise landing_page_views,yes
+T22,Wave 2,Meta,Universitaet / Schwabing,20-34,Music + 360 experience,10.0,28,tickets_attributed when booking is live; otherwise landing_page_views,yes
+T23,Wave 2,Meta,Universitaet / Schwabing,35-60,SXSW proof,10.0,28,tickets_attributed when booking is live; otherwise landing_page_views,yes
+T24,Wave 2,Meta,Universitaet / Schwabing,35-60,Music + 360 experience,10.0,28,tickets_attributed when booking is live; otherwise landing_page_views,yes

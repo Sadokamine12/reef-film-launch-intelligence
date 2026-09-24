@@ -1,0 +1,66 @@
+{
+  "trained_at_utc": "2026-09-24T08:38:26.008460+00:00",
+  "backend": "reef-lightweight-ml-v2 (numpy/pandas; no scikit-learn)",
+  "models": [
+    {
+      "name": "ESO demand model",
+      "status": "trained_low_confidence",
+      "rows": 26,
+      "target": "sold_pct",
+      "features": [
+        "days_to_event",
+        "start_hour",
+        "month",
+        "minimum_age",
+        "ticket_price_eur",
+        "duration_min",
+        "weekday",
+        "programme_family"
+      ],
+      "mae": 17.02986431167702,
+      "mae_seats": 18.562552099727952,
+      "rmse_pp": 18.35636975125559,
+      "r2": 0.4089909836035358,
+      "benchmark_mae": 19.314056033357378,
+      "benchmark_r2": -0.19399790251214077,
+      "validation_mode": "grouped CV",
+      "model_path": "models\\eso_demand_lightweight.json",
+      "operational": false,
+      "notes": "Model trained, but grouped-by-show validation is not strong enough for operational use. The dashboard uses the empirical PAVA baseline instead."
+    },
+    {
+      "name": "Engagement-response model",
+      "status": "waiting",
+      "rows": 0,
+      "target": "",
+      "features": [],
+      "mae": null,
+      "mae_seats": null,
+      "rmse_pp": null,
+      "r2": null,
+      "benchmark_mae": null,
+      "benchmark_r2": null,
+      "validation_mode": "",
+      "model_path": "",
+      "operational": false,
+      "notes": "No campaign observations yet."
+    },
+    {
+      "name": "Ticket-lift model",
+      "status": "waiting",
+      "rows": 0,
+      "target": "",
+      "features": [],
+      "mae": null,
+      "mae_seats": null,
+      "rmse_pp": null,
+      "r2": null,
+      "benchmark_mae": null,
+      "benchmark_r2": null,
+      "validation_mode": "",
+      "model_path": "",
+      "operational": false,
+      "notes": "No campaign history yet."
+    }
+  ]
+}

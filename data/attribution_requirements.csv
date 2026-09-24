@@ -1,0 +1,6 @@
+level,method,what_it_enables,required_for
+A,ESO purchase source report,Tracked sales by source; incrementality still needs a control,Cell-level purchase tracking
+B,Unique promo/source code,Tracked sales by code; incrementality still needs a control,Cell-level purchase tracking
+C,Reliable platform sale event,Tracked sales from instrumented campaigns,Purchase tracking
+D,Controlled holdout or staggered test,Incremental ticket estimate with uncertainty,Ticket-lift ML
+E,Aggregate seat inventory only,Uncertain overall campaign comparison only,Baseline monitoring
