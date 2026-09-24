@@ -8,12 +8,14 @@ import streamlit as st
 from campaign_lab import CAMPAIGN_PATH, REQUIRED_IMPORT, append_observations, attribution_readiness, campaign_summary, import_campaign_csv
 from data_contracts import ensure_campaign_frame, read_csv_safe
 from training_engine import run_all_training
-from ui import apply_theme, editing_enabled, page_intro
+from ui import apply_theme, editing_enabled, page_intro, select_market
 
 st.set_page_config(page_title="Campaign Data | REEF", page_icon="📥", layout="wide")
 apply_theme()
 page_intro("Measured marketing", "Campaign Data", "Import actual Meta or Google results, verify each field, and keep ticket-label provenance visible.")
-
+with st.sidebar:
+    st.markdown("### Test market")
+    market = select_market()
 summary, attr = campaign_summary(), attribution_readiness()
 cols = st.columns(4)
 for col, label, value in zip(cols,
@@ -62,6 +64,8 @@ if upload is not None:
                 st.error("Map every required field to a different CSV column.")
             else:
                 prepared = source.rename(columns={original: field for field, original in mapped.items()})
+                if "city" not in prepared.columns or prepared["city"].fillna("").astype(str).str.strip().eq("").all():
+                    prepared["city"] = market["label"]
                 added, total, errors = import_campaign_csv(prepared)
                 if errors:
                     for message in errors:
@@ -80,10 +84,13 @@ with st.expander("Add one observation manually"):
         wave = a[2].selectbox("Phase", ["Baseline", "Geo + creative", "Age refinement", "Intent", "Scale"])
         channel = a[3].selectbox("Channel", ["Meta", "Google Search", "Retargeting", "Organic/Partner", "No paid media"])
         b = st.columns(4)
-        area = b[0].selectbox("Area", ["ESO / Forschungszentrum", "Garching / Hochbrück", "Studentenstadt / Freimann", "Universität / Schwabing", "Munich + Garching", "All"])
+        city = market["label"]
+        area_options = [z["area"] for z in market.get("zones", [])] + [market.get("search_area", city), "Prior site/video visitors", "All"]
+        area = b[0].selectbox("Area", list(dict.fromkeys(area_options)))
         age = b[1].selectbox("Adults", ["20-60", "20-34", "35-60"])
         creative = b[2].selectbox("Creative", ["SXSW proof", "Music + 360 experience", "High-intent text", "Scarcity / next Tuesday", "None"])
         test_id = b[3].text_input("Test ID", placeholder="W1-01")
+        st.caption(f"Selected market city: {city}")
         c = st.columns(5)
         spend = c[0].number_input("Spend (EUR)", min_value=0.0, step=1.0)
         impressions = c[1].number_input("Impressions", min_value=0, step=1)
@@ -103,7 +110,7 @@ with st.expander("Add one observation manually"):
         try:
             row = pd.DataFrame([{
                 "date": obs_date.isoformat(), "show_date": show_date.isoformat(), "days_to_event": (show_date-obs_date).days,
-                "experiment_wave": wave, "channel": channel, "area": area, "age_band": age, "creative": creative,
+                "experiment_wave": wave, "channel": channel, "city": city, "area": area, "age_band": age, "creative": creative,
                 "test_id": test_id, "spend_eur": spend, "impressions": impressions, "clicks": clicks,
                 "video_views_75": views75, "landing_page_views": lpv,
                 "campaign_id": campaign_id, "adset_id": adset_id,

@@ -13,6 +13,8 @@ from data_contracts import CAMPAIGN_COLUMNS, ESO_SNAPSHOT_COLUMNS, canonical_boo
 from eso_baseline import fit_empirical_sales_curve, load_validated_snapshots
 from model_quality import load_status
 from project_config import load_config, total_capacity
+from market_context import market_catalog
+from experiment_protocol import build_experiment_plan
 
 
 def run_checks() -> list[dict]:
@@ -36,6 +38,9 @@ def run_checks() -> list[dict]:
     learning = float(marketing["experiment_budget_eur"])
     reserve = float(marketing["scale_reserve_eur"])
     add("Budget", budget == 500 and learning + reserve == budget, f"EUR {learning:g} learning + EUR {reserve:g} reserve = EUR {budget:g}")
+    markets = market_catalog(cfg)
+    market_ok = len(markets) >= 3 and all(len(m.get("zones", [])) >= 3 for m in markets.values())
+    add("Target markets", market_ok, f"{len(markets)} preset cities; custom city supported", "warning")
     folders = ["config", "data", "models", "pages", "docs"]
     add("Folders", all(Path(p).is_dir() for p in folders), ", ".join(folders))
 
@@ -68,7 +73,11 @@ def run_checks() -> list[dict]:
 
     plan = read_csv_safe("data/experiment_plan.csv")
     spend = pd.to_numeric(plan.get("planned_spend_eur", pd.Series(dtype=float)), errors="coerce").sum()
-    add("Experiment plan", len(plan) >= 13 and spend == learning and "step" in plan and plan["step"].is_unique, f"EUR {spend:g} test spend + EUR {reserve:g} reserve")
+    dynamic_plans_ok = True
+    for market in markets.values():
+        generated = build_experiment_plan(market)
+        dynamic_plans_ok &= len(generated) >= 13 and float(generated["planned_spend_eur"].sum()) == learning
+    add("Experiment plan", len(plan) >= 13 and spend == learning and "step" in plan and plan["step"].is_unique and dynamic_plans_ok, f"EUR {spend:g} test spend + EUR {reserve:g} reserve; city plans valid")
 
     status = load_status()
     add("Training status", bool(status), status.get("backend", "Run train_models.py"), "warning")
@@ -77,7 +86,8 @@ def run_checks() -> list[dict]:
         if item.get("model_path"):
             from lightweight_ml import LightweightEnsemble
             try:
-                model = LightweightEnsemble.load(item["model_path"])
+                model_path = Path(str(item["model_path"]).replace("\\", "/"))
+                model = LightweightEnsemble.load(model_path)
                 intact = bool(model.weights and len(model.weights[0]) == len(model.state.feature_names))
             except Exception:
                 intact = False

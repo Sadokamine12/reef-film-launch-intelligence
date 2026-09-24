@@ -1,3 +1,11 @@
+## City-selectable campaign planning
+
+- Added a boss-facing target-market selector shared across the executive forecast, targeting map, experiment plan, budget scenarios and campaign data.
+- Added presets for Garching / Munich North, Munich, Freising, Ismaning, Unterschleißheim, Erding and Dachau plus custom-city coordinates.
+- Kept ESO Supernova, its capacity and the empirical demand baseline fixed when only the ad-test city changes.
+- Added `city` to campaign observations and marketing-model features so future real data can support cross-city learning.
+- Made Wave 1 regenerate as three zones × two creatives = EUR 90 for the selected city while the full learning budget remains EUR 240 and scale reserve EUR 260.
+
 # Changelog
 
 ## Private sharing preparation

@@ -7,3 +7,8 @@ Data flows from ESO booking HTML to daily CSV, then validation/migration, empiri
 The three prediction targets are deliberately separate: baseline demand, engagement response, and incremental ticket lift. Directly attributed purchases are tracked purchases; they do not establish incremental lift. Only controlled incremental estimates can currently activate the lift trainer.
 
 The doctor reports blocking integrity problems as FAIL and unavailable future evidence as WARNING. Historical raw discovery records are retained even when excluded from training.
+
+
+## Target-market selection
+
+`market_context.py` defines paid-media market presets and neutral custom-city zones. Streamlit stores the boss's current market choice in session state. The selected market changes experiment geography, map centres, campaign tagging and planning allocation labels. It does **not** change the ESO Supernova venue, capacity, screening dates, or empirical demand baseline. Campaign rows include a `city` field so engagement and later controlled-lift models can learn cross-city effects once enough real observations exist.

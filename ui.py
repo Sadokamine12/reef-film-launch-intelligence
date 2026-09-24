@@ -74,3 +74,40 @@ def page_intro(section: str, title: str, description: str) -> None:
     st.markdown(f'<div class="reef-eyebrow" style="color:#087E83">{section}</div>', unsafe_allow_html=True)
     st.title(title)
     st.caption(description)
+
+
+def select_market(label: str = "Target market city") -> dict:
+    """Session-scoped market selector shared across all dashboard pages."""
+    from market_context import custom_market, default_market_key, market_catalog
+
+    catalog = market_catalog()
+    options = list(catalog.keys()) + ["Custom city"]
+    current = st.session_state.get("reef_market_key", default_market_key())
+    if current not in options:
+        current = default_market_key()
+    picked = st.selectbox(label, options, index=options.index(current), key="reef_market_picker")
+    st.session_state["reef_market_key"] = picked
+
+    if picked != "Custom city":
+        market = catalog[picked]
+        st.session_state["reef_market_context"] = market
+        return market
+
+    custom_name = st.text_input("Custom city name", value=st.session_state.get("reef_custom_city_name", "Custom city"), key="reef_custom_city_name_input")
+    c1, c2, c3 = st.columns(3)
+    lat = c1.number_input("Latitude", value=float(st.session_state.get("reef_custom_city_lat", 48.1372)), format="%.6f", key="reef_custom_city_lat_input")
+    lon = c2.number_input("Longitude", value=float(st.session_state.get("reef_custom_city_lon", 11.5756)), format="%.6f", key="reef_custom_city_lon_input")
+    radius = c3.number_input("Test radius (km)", min_value=0.5, max_value=20.0, value=float(st.session_state.get("reef_custom_city_radius", 2.5)), step=0.5, key="reef_custom_city_radius_input")
+    st.session_state["reef_custom_city_name"] = custom_name
+    st.session_state["reef_custom_city_lat"] = lat
+    st.session_state["reef_custom_city_lon"] = lon
+    st.session_state["reef_custom_city_radius"] = radius
+    market = custom_market(custom_name, lat, lon, radius)
+    st.session_state["reef_market_context"] = market
+    return market
+
+
+def current_market() -> dict:
+    """Return the current session market, falling back to the configured default."""
+    from market_context import get_market
+    return st.session_state.get("reef_market_context") or get_market(st.session_state.get("reef_market_key"))

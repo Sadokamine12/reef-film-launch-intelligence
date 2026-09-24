@@ -4,16 +4,20 @@ import pandas as pd
 import plotly.express as px
 import streamlit as st
 
-from experiment_protocol import campaign_timeline, attribution_requirements
+from experiment_protocol import build_experiment_plan, campaign_timeline, attribution_requirements
 from project_config import load_config
-from ui import apply_theme, page_intro
+from ui import apply_theme, page_intro, select_market
 
 st.set_page_config(page_title="Resolution Experiment Plan", page_icon="🧪", layout="wide")
 apply_theme()
-page_intro("Campaign decisions", "EUR 500 Experiment", "A small test first, followed by conditional spending based on measured results.")
+page_intro("Campaign decisions", "EUR 500 Experiment", "Choose a target city, run a balanced first test, then spend conditionally from measured results.")
 
 cfg = load_config()
-plan = pd.read_csv("data/experiment_plan.csv")
+with st.sidebar:
+    st.markdown("### Test market")
+    market = select_market()
+    st.caption("The experiment plan updates for this city. The ESO venue and demand baseline stay fixed.")
+plan = build_experiment_plan(market)
 timeline = campaign_timeline()
 
 m = cfg["marketing"]
@@ -22,7 +26,7 @@ c1.metric("Total budget", f"€{m['total_budget_eur']:.0f}")
 c2.metric("Learning budget", f"€{m['experiment_budget_eur']:.0f}")
 c3.metric("Protected scale reserve", f"€{m['scale_reserve_eur']:.0f}")
 c4.metric("Target", f"{m['success_occupancy_pct']:.0f}%+ occupancy")
-st.info("**Current action: EUR 0.** Prepare the six first-wave ads, then record a no-paid Resolution booking window. Release the EUR 90 first wave only after bookings are live; keep the EUR 260 scale reserve conditional.")
+st.info(f"**Selected test market: {market['label']} · Current action: EUR 0.** Prepare the six first-wave ads for this city, then record a no-paid Resolution booking window. Release the EUR 90 first wave only after bookings are live; keep the EUR 260 scale reserve conditional.")
 
 st.subheader("Campaign spending sequence")
 fig = px.bar(timeline, x="budget_eur", y="name", orientation="h", text="budget_eur", hover_data=["start_date","end_date","action","primary_measure"])
@@ -31,9 +35,9 @@ st.plotly_chart(fig, width="stretch")
 with st.expander("Dates, dependencies, and measurement for each phase"):
     st.dataframe(timeline, width="stretch", hide_index=True)
 
-st.subheader("First test: three areas × two creatives")
-first_wave = plan[plan["wave"].eq("Geo + creative")][["area", "creative", "age_band", "planned_spend_eur"]].copy()
-st.dataframe(first_wave.rename(columns={"area":"Area", "creative":"Creative", "age_band":"Audience", "planned_spend_eur":"EUR per cell"}), width="stretch", hide_index=True)
+st.subheader(f"First test in {market['label']}: three areas × two creatives")
+first_wave = plan[plan["wave"].eq("Geo + creative")][["city", "area", "creative", "age_band", "planned_spend_eur"]].copy()
+st.dataframe(first_wave.rename(columns={"city":"City", "area":"Area", "creative":"Creative", "age_band":"Audience", "planned_spend_eur":"EUR per cell"}), width="stretch", hide_index=True)
 with st.expander("See the full EUR 240 learning plan"):
     st.dataframe(plan, width="stretch", hide_index=True)
     st.caption("Wave 2 areas and creative are selected from first-wave evidence; their placeholders are intentionally unassigned today.")

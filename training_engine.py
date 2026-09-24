@@ -19,6 +19,7 @@ from lightweight_ml import (
     regression_metrics,
 )
 from project_config import load_config
+from experiment_protocol import build_experiment_plan
 
 MODEL_DIR = Path("models")
 DATA_DIR = Path("data")
@@ -200,7 +201,7 @@ def train_eso_demand_model(path: str | Path = "data/eso_comparable_snapshots.csv
     return TrainResult(
         "ESO demand model", status, len(df), target="sold_pct", features=features,
         mae=mae, mae_seats=mae_seats, rmse_pp=rmse_pp, r2=r2, benchmark_mae=bmae, benchmark_r2=br2,
-        validation_mode=validation_mode, model_path=str(out), operational=operational, notes=notes,
+        validation_mode=validation_mode, model_path=out.as_posix(), operational=operational, notes=notes,
     )
 
 
@@ -220,7 +221,7 @@ def _derive_engagement_targets(df: pd.DataFrame) -> pd.DataFrame:
 
 def _marketing_features(df: pd.DataFrame, include_channel: bool = True):
     numeric = [c for c in ["spend_eur", "days_to_event"] if c in df.columns]
-    cats = [c for c in ["area", "age_band", "creative"] if c in df.columns]
+    cats = [c for c in ["city", "area", "age_band", "creative"] if c in df.columns]
     if include_channel and "channel" in df.columns:
         cats.insert(0, "channel")
     return numeric, cats
@@ -232,7 +233,7 @@ def _campaign_groups(df: pd.DataFrame) -> pd.Series:
         if c in df.columns:
             pieces.append(df[c].fillna("").astype(str))
     fallback = pd.Series("", index=df.index, dtype=str)
-    for c in ["channel", "area", "age_band", "creative", "experiment_wave"]:
+    for c in ["channel", "city", "area", "age_band", "creative", "experiment_wave"]:
         if c in df.columns:
             fallback = fallback + "|" + df[c].fillna("").astype(str)
     if not pieces:
@@ -350,27 +351,12 @@ def train_ticket_lift_model(path: str | Path = "data/campaign_history.csv") -> T
 
 
 def generate_active_learning_plan(path: str | Path = "data/experiment_plan.csv") -> pd.DataFrame:
-    """Complete €240 learning plan; the remaining €260 is protected for scale."""
-    rows = []
-    # Wave 0: causal baseline window — no spend, collect ESO seat movement.
-    rows.append({"step":"W0", "wave":"Baseline", "dependency":"Tickets live", "channel":"No paid media", "area":"All", "age_band":"20-60", "creative":"None", "planned_spend_eur":0, "duration_days":2, "purpose":"Measure pre-campaign Resolution sales velocity", "control_group":"yes"})
-    # Wave 1: 3 geos x 2 creatives, broad adult target. €15 each = €90.
-    for area in ["ESO / Forschungszentrum", "Garching / Hochbrueck", "Universitaet / Schwabing"]:
-        for creative in ["SXSW proof", "Music + 360 experience"]:
-            rows.append({"step":f"W1-{len(rows):02d}", "wave":"Geo + creative", "dependency":"After baseline window", "channel":"Meta", "area":area, "age_band":"20-60", "creative":creative, "planned_spend_eur":15, "duration_days":3, "purpose":"Learn geography and creative engagement", "control_group":"no"})
-    # Wave 2: age refinement; executed only on top 2 geos with winning creative. €20 each = €80.
-    for area in ["WINNER_GEO_1", "WINNER_GEO_2"]:
-        for age in ["20-34", "35-60"]:
-            rows.append({"step":f"W2-{len(rows):02d}", "wave":"Age refinement", "dependency":"Use top 2 W1 geos + winning creative", "channel":"Meta", "area":area, "age_band":age, "creative":"WINNER_CREATIVE", "planned_spend_eur":20, "duration_days":3, "purpose":"Learn age response without fragmenting Wave 1", "control_group":"no"})
-    # Search and retargeting learn channel intent. €40 + €30 = €70. Total learning spend = €240.
-    rows.append({"step":"W3-SEARCH", "wave":"Intent", "dependency":"Ticket landing page live", "channel":"Google Search", "area":"Munich + Garching", "age_band":"20-60", "creative":"High-intent text", "planned_spend_eur":40, "duration_days":4, "purpose":"Compare high-intent search against Meta", "control_group":"no"})
-    rows.append({"step":"W3-RET", "wave":"Retargeting", "dependency":"Only if retargeting pool is large enough", "channel":"Retargeting", "area":"Prior site/video visitors", "age_band":"20-60", "creative":"Scarcity / next Tuesday", "planned_spend_eur":30, "duration_days":4, "purpose":"Measure warm-audience efficiency", "control_group":"no"})
-    plan = pd.DataFrame(rows)
+    """Write the configured default city's complete EUR 240 learning plan."""
+    plan = build_experiment_plan()
     p = Path(path)
     p.parent.mkdir(parents=True, exist_ok=True)
     plan.to_csv(p, index=False)
     return plan
-
 
 def _append_training_history(results: list[TrainResult], trained_at: str) -> None:
     rows = []

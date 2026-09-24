@@ -12,7 +12,7 @@ from advanced_ml import (
 )
 from model_quality import current_eso_model, load_status
 from project_config import load_config as load_project_config
-from ui import apply_theme, page_intro, BLUE, TEAL, AMBER, INK
+from ui import apply_theme, page_intro, select_market, BLUE, TEAL, AMBER, INK
 
 st.set_page_config(page_title="Budget Scenarios | REEF", page_icon="📈", layout="wide")
 apply_theme()
@@ -20,6 +20,10 @@ page_intro("Planning model", "Budget Scenarios", "See how the outcome changes wi
 
 cfg = load_config()
 full = load_project_config()
+with st.sidebar:
+    st.markdown("### Test market")
+    market = select_market()
+    st.caption("Paid-media scenarios use this selected market. ESO demand evidence remains venue-specific.")
 curve, empirical, _ = empirical_baseline()
 marketing = load_marketing_model()
 capacity = int(cfg["capacity_per_show"]) * len(cfg["show_dates"])
@@ -32,8 +36,8 @@ with st.expander("Change scenario inputs"):
     days_to_event = st.slider("Days before first screening when ads start", 7, 60, 28)
     st.caption("Before lift evidence exists, at most EUR 240 goes to the planned learning tests. Any remainder stays unallocated.")
 
-sim, allocation = hybrid_simulation(budget, model=marketing, cfg=cfg, emp_stats=empirical, days_to_event=days_to_event, n=8000)
-baseline, _ = hybrid_simulation(0, model=marketing, cfg=cfg, emp_stats=empirical, days_to_event=days_to_event, n=8000)
+sim, allocation = hybrid_simulation(budget, model=marketing, cfg=cfg, emp_stats=empirical, days_to_event=days_to_event, n=8000, market=market)
+baseline, _ = hybrid_simulation(0, model=marketing, cfg=cfg, emp_stats=empirical, days_to_event=days_to_event, n=8000, market=market)
 spent = float(allocation["budget_eur"].sum()) if not allocation.empty else 0.0
 low, middle, high = [round(float(sim["total_tickets"].quantile(q))) for q in (.10, .50, .90)]
 baseline_mid = round(float(baseline["total_tickets"].median()))
@@ -46,7 +50,7 @@ cols[2].metric("Assumed extra", f"+{lift_mid} tickets")
 cols[3].metric("Spend released", f"EUR {spent:.0f}", f"EUR {budget-spent:.0f} held")
 st.caption(f"Low / base / high: {low} / {middle} / {high} of {capacity} seats. These are planning ranges, not calibrated prediction intervals.")
 
-forecast = budget_forecast_curve(1000, 50, model=marketing, cfg=cfg, emp_stats=empirical, days_to_event=days_to_event)
+forecast = budget_forecast_curve(1000, 50, model=marketing, cfg=cfg, emp_stats=empirical, days_to_event=days_to_event, market=market)
 tab_spend, tab_screenings, tab_next = st.tabs(["Spend and occupancy", "Four Tuesdays", "Next decision"])
 
 with tab_spend:
@@ -95,7 +99,8 @@ with tab_next:
         st.dataframe(next_increment_scenarios(allocation, model=marketing, days_to_event=days_to_event).head(8), hide_index=True, width="stretch")
     else:
         st.info("There is no measured marginal ticket return yet. Run the balanced EUR 90 geography × creative test first. Move the reserve only after results and attribution are reviewed.")
-        plan = pd.read_csv("data/experiment_plan.csv")
+        from experiment_protocol import build_experiment_plan
+        plan = build_experiment_plan(market)
         first = plan[plan["wave"].eq("Geo + creative")][["area", "creative", "age_band", "planned_spend_eur"]]
         st.dataframe(first.rename(columns={"area": "Area", "creative": "Creative", "age_band": "Audience", "planned_spend_eur": "EUR per cell"}), hide_index=True, width="stretch")
     with st.expander("Model status and validation"):

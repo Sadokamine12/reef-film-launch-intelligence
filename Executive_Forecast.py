@@ -8,7 +8,8 @@ from advanced_ml import empirical_baseline, hybrid_simulation, load_config as fl
 from campaign_lab import attribution_readiness, campaign_summary
 from model_quality import confidence_summary, current_eso_model, eso_coverage
 from project_config import load_config, total_capacity
-from ui import apply_theme, INK, MUTED, TEAL, BLUE
+from ad_targeting_map import planned_zones
+from ui import apply_theme, select_market, INK, MUTED, TEAL, BLUE
 
 
 def interval(series) -> tuple[int, int, int]:
@@ -47,14 +48,24 @@ def main() -> None:
     st.set_page_config(page_title="Executive Forecast | REEF", page_icon="🎬", layout="wide")
     apply_theme()
     cfg, flat = load_config(), flat_config()
+    with st.sidebar:
+        st.markdown("### Test market")
+        market = select_market()
+        st.caption("This changes paid-media geography only. The venue and ESO demand baseline remain fixed in Garching.")
+    zones, market_meta = planned_zones(
+        cfg["marketing"]["total_budget_eur"],
+        cfg["marketing"]["experiment_budget_eur"],
+        40,
+        market=market,
+    )
     capacity = total_capacity(cfg)
     _, empirical, _ = empirical_baseline()
     model = load_marketing_model()
     coverage, eso_model = eso_coverage(), current_eso_model()
     attribution, campaign = attribution_readiness(), campaign_summary()
     confidence = confidence_summary(coverage, eso_model, attribution)
-    no_paid_sim, _ = hybrid_simulation(0, model=model, cfg=flat, emp_stats=empirical, n=8000)
-    plan_sim, allocation = hybrid_simulation(cfg["marketing"]["total_budget_eur"], model=model, cfg=flat, emp_stats=empirical, n=8000)
+    no_paid_sim, _ = hybrid_simulation(0, model=model, cfg=flat, emp_stats=empirical, n=8000, market=market)
+    plan_sim, allocation = hybrid_simulation(cfg["marketing"]["total_budget_eur"], model=model, cfg=flat, emp_stats=empirical, n=8000, market=market)
     no_paid, with_tests, lift = (interval(s) for s in (no_paid_sim["total_tickets"], plan_sim["total_tickets"], plan_sim["incremental_tickets"]))
     planned_spend = int(allocation["budget_eur"].sum()) if not allocation.empty else 0
     reserve = int(cfg["marketing"]["total_budget_eur"] - planned_spend)
@@ -63,7 +74,7 @@ def main() -> None:
     booking_live = bool(cfg["tracking"].get("resolution_booking_urls"))
 
     st.markdown(f'''<div class="reef-hero"><div class="reef-eyebrow">REEF Distribution / launch decision brief</div>
-      <h1>Resolution at ESO Supernova</h1><p>Four Tuesday screenings · 2–23 February 2027 · {capacity} seats · EUR 500 campaign ceiling</p></div>''', unsafe_allow_html=True)
+      <h1>Resolution at ESO Supernova</h1><p>Four Tuesday screenings · 2–23 February 2027 · {capacity} seats · EUR 500 campaign ceiling · test market: {market["label"]}</p></div>''', unsafe_allow_html=True)
     booking_status = "BOOKING TRACKING CONFIGURED" if booking_live else "PRE-LAUNCH · NO RESOLUTION BOOKINGS"
     st.markdown(f'<span class="reef-pill reef-pill-amber">{booking_status}</span> &nbsp; <span class="reef-pill reef-pill-amber">ATTRIBUTION LEVEL {attribution["level"]}</span> &nbsp; <span class="reef-pill reef-pill-amber">PAID LIFT IS A SCENARIO</span>', unsafe_allow_html=True)
     st.markdown('<div style="height:16px"></div>', unsafe_allow_html=True)
@@ -71,13 +82,14 @@ def main() -> None:
     left, right = st.columns([1.6, 1], gap="medium")
     with left:
         st.markdown('''<div class="reef-card"><div class="reef-label">Recommendation</div><h3>Prepare a small, balanced first test</h3>
-          <p>Target adults <b>20–60</b> in <b>ESO / Forschungszentrum</b>, <b>Garching / Hochbrück</b>, and <b>Universität / Schwabing</b>.</p>
+          <p>Target adults <b>20–60</b> in the three balanced test zones selected for <b>{market["label"]}</b>.</p>
+          <p><b>{", ".join(zones["area"].tolist())}</b></p>
           <p>Test <b>SXSW proof</b> against <b>music + 360° experience</b> in each area. Six Meta cells, EUR 15 each. No measured winner exists yet.</p></div>''', unsafe_allow_html=True)
     with right:
         st.markdown('''<div class="reef-card"><div class="reef-label">Money and timing</div><div class="reef-number">EUR 0 now</div>
           <p>Wait for public Resolution bookings. Record 48 hours of seat movement without paid ads.</p>
           <p><b>Then:</b> EUR 90 first wave. Keep EUR 410 available for later decisions.</p></div>''', unsafe_allow_html=True)
-    st.markdown(f'<div class="reef-cta"><strong>Next decision:</strong> 48 hours after bookings open. Check actual sales pace, then start the EUR 90 test. Keep the EUR {reserve} scale reserve conditional.</div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="reef-cta"><strong>Selected test market:</strong> {market["label"]}. <strong>Next decision:</strong> 48 hours after bookings open. Check actual sales pace, then start the EUR 90 test. Keep the EUR {reserve} scale reserve conditional.</div>', unsafe_allow_html=True)
 
     st.markdown('## Ticket outlook')
     st.caption('Tickets across all four screenings. Low and high are scenario ranges, not calibrated prediction intervals. The paid case includes only the EUR 240 learning tests; the reserve stays unallocated.')

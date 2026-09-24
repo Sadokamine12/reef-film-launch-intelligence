@@ -51,6 +51,11 @@ DEFAULT_CONFIG = {
         "baseline_max_booking_pages": 24,
         "daily_collection": True,
     },
+    "market_testing": {
+        "default_city": "Garching / Munich North",
+        "allow_custom_city": True,
+        "note": "Target-market selection changes paid-media test geography only. ESO venue and empirical demand baseline remain fixed in Garching.",
+    },
     "model_gates": {
         "engagement_min_rows": 12,
         "ticket_lift_min_rows": 18,
