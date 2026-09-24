@@ -55,6 +55,6 @@ No credentials are stored. The project uses only public ESO pages until campaign
 - `pages/`: Streamlit drill-down pages.
 - `docs/ARCHITECTURE.md`, `docs/OPERATIONS.md`, `docs/MODEL_CARD.md`, `docs/DATA_DICTIONARY.md`, `docs/EXPERIMENT_PROTOCOL.md`, `docs/PROJECT_PLAN.md`: methods and operations.
 
-The dashboard distinguishes **actual**, **empirical fitted**, **learned ML**, and **scenario** claims. See `CHANGELOG.md` for changes in this revision.
+The dashboard distinguishes **actual**, **empirical fitted**, **learned ML**, and **scenario** claims. The four Tuesday cards are no longer an artificial equal split: before Resolution-specific sales exist, they use a transparent calendar + campaign-maturity planning prior (indices 96 / 92 / 108 / 104) that preserves the total forecast. The published calendar facts come from the Bavarian school-holiday calendar and TUM/LMU semester dates; the direction and magnitude of the weights remain modelling assumptions until live sales replace them. See `CHANGELOG.md` for changes in this revision.
 
 The first page is a decision brief. It shows the current spend decision, no-paid and test scenarios, the main uncertainty, and the next decision trigger. The sidebar leads to Sales Forecast, Ad Targeting Map, Campaign Experiment, Budget Scenarios, Campaign Data, Model Quality, Data Health, and Evidence Methodology. Technical details and raw rows sit in expanders on the relevant pages.

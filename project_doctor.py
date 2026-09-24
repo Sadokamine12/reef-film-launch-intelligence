@@ -33,6 +33,21 @@ def run_checks() -> list[dict]:
     except ValueError:
         valid_dates = False
     add("Screenings and capacity", valid_dates and total_capacity(cfg) == 436, f"{len(dates)} dates; {total_capacity(cfg)} seats")
+    screening_cfg = cfg.get("screening_forecast", {})
+    screening_shows = screening_cfg.get("shows", {})
+    screening_weights = []
+    for d in dates:
+        try:
+            screening_weights.append(float(screening_shows.get(d, {}).get("weight", 0)))
+        except (TypeError, ValueError):
+            screening_weights.append(0.0)
+    screening_ok = (
+        len(screening_weights) == len(dates)
+        and all(w > 0 for w in screening_weights)
+        and abs(sum(screening_weights) - len(dates)) < 1e-6
+        and all(screening_shows.get(d, {}).get("scenario_driver") for d in dates)
+    )
+    add("Screening forecast priors", screening_ok, f"indices {[round(w*100) for w in screening_weights]}; transparent calendar/campaign scenario", "warning")
     marketing = cfg["marketing"]
     budget = float(marketing["total_budget_eur"])
     learning = float(marketing["experiment_budget_eur"])
