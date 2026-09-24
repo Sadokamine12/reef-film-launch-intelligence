@@ -370,8 +370,16 @@ def budget_forecast_curve(max_budget: int = 1000, step: int = 50, model: Optiona
 
 
 def per_show_forecast(sim: pd.DataFrame, cfg: dict) -> pd.DataFrame:
-    dates = list(cfg.get("show_dates", []) or cfg.get("screenings", {}).get("dates", []))
-    capacity = int(cfg.get("capacity_per_show", cfg.get("venue", {}).get("capacity_per_show", 109)))
+    dates = list(cfg.get("show_dates", []) or (cfg.get("screenings", {}) if isinstance(cfg.get("screenings", {}), dict) else {}).get("dates", []))
+
+    # Support both the flattened runtime config and the nested project config.
+    # Do not use dict.get(key, nested_expression) here: Python evaluates the
+    # default expression eagerly, and flat_context stores "venue" as a string.
+    if cfg.get("capacity_per_show") is not None:
+        capacity = int(cfg["capacity_per_show"])
+    else:
+        venue_cfg = cfg.get("venue", {})
+        capacity = int(venue_cfg.get("capacity_per_show", 109)) if isinstance(venue_cfg, dict) else 109
     weights_mean, block = _screening_prior(cfg, dates)
     if len(weights_mean) == 0:
         return pd.DataFrame()
