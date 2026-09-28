@@ -106,8 +106,8 @@ class DataTests(unittest.TestCase):
         self.assertLessEqual(allocation["budget_eur"].sum(), 500)
         self.assertTrue((allocation["budget_eur"] <= 200).all())
         zones, meta = planned_zones()
-        self.assertEqual(int(zones["budget_eur"].sum()), 90)
-        self.assertEqual(sorted(round(float(x)) for x in zones["budget_eur"].tolist()), [30, 30, 30])
+        self.assertEqual(int(zones["budget_eur"].sum()), 70)
+        self.assertEqual(sorted(round(float(x)) for x in zones["budget_eur"].tolist()), [35, 35])
         self.assertEqual(meta["geo_budget"] + meta["later_tests"] + meta["search_budget"] + meta["scale_reserve"], 500)
         confidence = confidence_summary({"unique_shows": 13, "repeated_shows": 13, "lead_min": 17}, {"mae": 17}, {"level": "E"})
         self.assertEqual(confidence["resolution_final"], "VERY LOW")
@@ -115,19 +115,19 @@ class DataTests(unittest.TestCase):
     def test_all_market_presets_keep_budget_and_three_zones(self):
         for name, market in market_catalog().items():
             plan = build_experiment_plan(market)
-            self.assertEqual(plan["planned_spend_eur"].sum(), 240, name)
+            self.assertEqual(plan["planned_spend_eur"].sum(), 100, name)
             wave1 = plan[plan["wave"].eq("Geo + creative")]
-            self.assertEqual(wave1["area"].nunique(), 3, name)
-            self.assertEqual(len(wave1), 6, name)
+            self.assertEqual(wave1["area"].nunique(), 2, name)
+            self.assertEqual(len(wave1), 4, name)
             self.assertTrue(wave1["city"].eq(market["label"]).all(), name)
             zones, meta = planned_zones(market=market)
-            self.assertEqual(len(zones), 3, name)
-            self.assertAlmostEqual(float(zones["budget_eur"].sum()), 90.0, places=6)
+            self.assertEqual(len(zones), 2, name)
+            self.assertAlmostEqual(float(zones["budget_eur"].sum()), 70.0, places=6)
             self.assertEqual(meta["market_city"], market["label"])
 
         custom = custom_market("Teststadt", 48.1, 11.5, 3.0)
         plan = build_experiment_plan(custom)
-        self.assertEqual(plan[plan["wave"].eq("Geo + creative")]["area"].nunique(), 3)
+        self.assertEqual(plan[plan["wave"].eq("Geo + creative")]["area"].nunique(), 2)
         self.assertTrue(plan["city"].eq("Teststadt").all())
 
     def test_city_prediction_prior_changes_planning_lift(self):
@@ -141,10 +141,10 @@ class DataTests(unittest.TestCase):
         self.assertGreaterEqual(freising_meta["scenario_factor"], 0.55)
         self.assertLessEqual(local_meta["scenario_factor"], 1.05)
 
-        local_alloc = optimize_budget(90, market=local)
-        freising_alloc = optimize_budget(90, market=freising)
-        self.assertAlmostEqual(float(local_alloc["budget_eur"].sum()), 90.0, places=6)
-        self.assertAlmostEqual(float(freising_alloc["budget_eur"].sum()), 90.0, places=6)
+        local_alloc = optimize_budget(100, market=local)
+        freising_alloc = optimize_budget(100, market=freising)
+        self.assertAlmostEqual(float(local_alloc["budget_eur"].sum()), 100.0, places=6)
+        self.assertAlmostEqual(float(freising_alloc["budget_eur"].sum()), 100.0, places=6)
         self.assertGreater(
             float(local_alloc["expected_extra_tickets"].sum()),
             float(freising_alloc["expected_extra_tickets"].sum()),
