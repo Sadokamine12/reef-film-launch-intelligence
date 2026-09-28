@@ -33,6 +33,17 @@ class StreamlitPageRegistryTests(unittest.TestCase):
         existing = {p.name for p in Path("pages").glob("*.py")}
         self.assertTrue(required.issubset(existing), required - existing)
 
+    def test_sidebar_page_links_exist(self):
+        ui_source = Path("ui.py").read_text(encoding="utf-8")
+        targets = re.findall(r'st\\.page_link\\("([^"]+)"', ui_source)
+        self.assertTrue(targets, "No sidebar page links found in ui.py")
+        missing = [target for target in targets if not Path(target).exists()]
+        self.assertEqual(
+            missing,
+            [],
+            f"Sidebar contains stale Streamlit page link(s): {missing}",
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
