@@ -29,7 +29,7 @@ def render_sidebar() -> None:
             """,
             unsafe_allow_html=True,
         )
-        st.page_link("Executive_Forecast.py", label="Dashboard", icon="🏠")
+        st.page_link("app.py", label="Dashboard", icon="🏠")
         st.page_link("pages/1_Sales_Plan.py", label="Ticket Sales", icon="📊")
         st.page_link("pages/3_Marketing_Plan.py", label="Campaign Plan", icon="📣")
         st.page_link("pages/2_Where_to_Advertise.py", label="Audiences", icon="👥")
