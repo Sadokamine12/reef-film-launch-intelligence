@@ -1,4 +1,4 @@
-"""Compatibility entry point; the launcher uses Executive_Forecast.py."""
+"""Streamlit Community Cloud entry point for the REEF Resolution dashboard."""
 from Executive_Forecast import main
 
 
