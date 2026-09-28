@@ -351,7 +351,7 @@ def train_ticket_lift_model(path: str | Path = "data/campaign_history.csv") -> T
 
 
 def generate_active_learning_plan(path: str | Path = "data/experiment_plan.csv") -> pd.DataFrame:
-    """Write the configured default city's complete EUR 240 learning plan."""
+    """Write the configured default city's EUR 100 controlled first-test plan."""
     plan = build_experiment_plan()
     p = Path(path)
     p.parent.mkdir(parents=True, exist_ok=True)
