@@ -1,323 +1,89 @@
+"""Local advertising catchment for Resolution @ ESO Supernova."""
 from __future__ import annotations
 
 import math
 
-import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 
-from ad_targeting_map import (
-    planned_zones,
-    load_campaign_history,
-    measured_area_performance,
-    join_measured_to_zones,
-    u6_path_frame,
-)
-from ui import apply_theme, select_market
-
-st.set_page_config(page_title="Resolution Ad Targeting Map", page_icon="🗺️", layout="wide")
-
-st.markdown(
-    """
-<style>
-.block-container{padding-top:1rem;max-width:1550px}
-.hero-map{padding:22px 26px;border-radius:22px;background:linear-gradient(120deg,#0c1118,#122235 58%,#14333a);border:1px solid #29384a;margin-bottom:16px}
-.hero-map h1{font-size:2.1rem;margin:0 0 7px 0}.hero-map p{margin:0;color:#b8c5d6}
-.map-card{border:1px solid #29384a;background:#101720;border-radius:16px;padding:15px 17px;height:100%}
-.small-muted{color:#94a3b8;font-size:.87rem}
-[data-testid="stMetric"]{background:#101720;border:1px solid #29384a;padding:14px;border-radius:14px}
-[data-testid="stPlotlyChart"]{border:1px solid #29384a;border-radius:18px;overflow:hidden;background:#0b1118}
-</style>
-""",
-    unsafe_allow_html=True,
-)
-apply_theme()
-
+from launch_strategy import geography_plan
 from project_config import load_config
-from campaign_lab import attribution_readiness
-from market_context import market_prediction_context
+from ui import apply_theme, page_intro
+
+st.set_page_config(page_title="Where to Advertise | REEF", page_icon="🗺️", layout="wide")
+apply_theme()
+page_intro("Media geography", "Where to Advertise", "Start close to ESO. Expand only when the closer catchment has enough delivery and a screening still needs demand.")
 
 cfg = load_config()
-marketing_cfg = cfg.get("marketing", {})
-attribution = attribution_readiness()
-with st.sidebar:
-    st.markdown("### Test market")
-    market = select_market()
-    st.caption("Changing the city changes the ad experiment and map, not the ESO venue baseline.")
+venue = cfg["venue"]
+lat0, lon0 = float(venue["lat"]), float(venue["lon"])
 
-st.markdown(
-    """
-<div class="hero-map">
-  <h1>Where to market</h1>
-  <p>Three balanced geography tests in the selected target market · EUR 90 first wave</p>
-</div>
-""",
-    unsafe_allow_html=True,
-)
-
-total_budget = int(marketing_cfg.get("total_budget_eur", 500))
-validation_budget = int(marketing_cfg.get("experiment_budget_eur", 240))
-search_budget = 40
-with st.expander("Map display options"):
-    show_u6 = st.toggle("Show U6 corridor", value=True)
-    show_labels = st.toggle("Show zone labels", value=True)
-    basemap_name = st.selectbox(
-        "Map background",
-        ["OpenStreetMap", "Carto light", "Carto dark", "No tiles (fallback)"],
-        index=0,
-        help="If your network blocks one tile provider, switch to another. 'No tiles' still shows all campaign zones.",
-    )
-
-zones, meta = planned_zones(total_budget, validation_budget, search_budget, market=market)
-market_pred = market_prediction_context(market, cfg)
-history = load_campaign_history()
-measured = measured_area_performance(history, market_city=market["label"])
-zones = join_measured_to_zones(zones, measured)
-measured_ready = not measured.empty and measured.get("observations", pd.Series(dtype=float)).sum() >= 4
-
-# Stable role colours. Plotly wants rgba strings.
-ROLE_COLORS = {
-    "Venue / campus": (38, 196, 166),
-    "Local": (72, 145, 245),
-    "Culture / university": (245, 158, 66),
-    "Culture": (245, 158, 66),
-    "U6 corridor": (139, 92, 246),
-    "City centre": (38, 196, 166),
-    "University": (139, 92, 246),
-    "Residential": (72, 145, 245),
-    "Regional": (245, 158, 66),
-    "North catchment": (72, 145, 245),
-    "Work / residential": (139, 92, 246),
-    "Centre": (38, 196, 166),
-    "North": (72, 145, 245),
-    "South": (245, 158, 66),
-}
-
-k0, k1, k2, k3, k4 = st.columns(5)
-k0.metric("Selected market", market["label"])
-access_delta = f"{market_pred['public_transport_min']:.0f} min to ESO" if market_pred.get("public_transport_min") is not None else f"{market_pred['distance_to_venue_km']:.1f} km to ESO"
-k1.metric("Accessibility", market_pred["accessibility"], access_delta)
-k2.metric("First geography test", f"EUR {meta['geo_budget']:.0f}")
-k3.metric("Balanced cells", "3 areas × 2 creatives")
-k4.metric("Held for later decisions", f"EUR {meta['total_budget']-meta['geo_budget']:.0f}")
-st.caption("Area colours show measured tracked-purchase performance when reliable rows exist. Until then they show test geography, not a success probability.")
-
-if measured_ready:
-    st.success("Measured ticket-attribution data exists. The zone cards include verified performance where available.")
-else:
-    st.info("Pre-campaign mode: these circles are **experimental test zones**, not proven winners. Exact ticket-level geo learning requires verified purchase attribution.")
-    if attribution.get("verified_ticket_rows", 0) == 0:
-        st.caption("Attribution prerequisite: ESO conversion/source reporting, unique promo codes, or another verified purchase source. With seat counts only, we can measure total lift but not honestly assign each sale to a geography.")
-
-
-def circle_points(lat: float, lon: float, radius_km: float, n: int = 72):
-    """Approximate a geodesic circle around a map point."""
-    earth_km = 6371.0088
+def circle(lat: float, lon: float, radius_km: float, n: int = 96):
+    earth = 6371.0088
     lat1 = math.radians(lat)
     lon1 = math.radians(lon)
-    angular = radius_km / earth_km
+    angular = radius_km / earth
     lats, lons = [], []
     for i in range(n + 1):
         bearing = 2 * math.pi * i / n
-        lat2 = math.asin(
-            math.sin(lat1) * math.cos(angular)
-            + math.cos(lat1) * math.sin(angular) * math.cos(bearing)
-        )
-        lon2 = lon1 + math.atan2(
-            math.sin(bearing) * math.sin(angular) * math.cos(lat1),
-            math.cos(angular) - math.sin(lat1) * math.sin(lat2),
-        )
-        lats.append(math.degrees(lat2))
-        lons.append(math.degrees(lon2))
+        lat2 = math.asin(math.sin(lat1)*math.cos(angular)+math.cos(lat1)*math.sin(angular)*math.cos(bearing))
+        lon2 = lon1 + math.atan2(math.sin(bearing)*math.sin(angular)*math.cos(lat1), math.cos(angular)-math.sin(lat1)*math.sin(lat2))
+        lats.append(math.degrees(lat2)); lons.append(math.degrees(lon2))
     return lats, lons
 
+c1,c2,c3 = st.columns(3)
+c1.metric("Zone A", "0–15 km", "50% of local paid reach guide")
+c2.metric("Zone B", "15–30 km", "35% of local paid reach guide")
+c3.metric("Zone C", "30–50 km", "15% test-only expansion")
 
-MAP_STYLE = {
-    "OpenStreetMap": "open-street-map",
-    "Carto light": "carto-positron",
-    "Carto dark": "carto-darkmatter",
-    "No tiles (fallback)": "white-bg",
-}[basemap_name]
-
-left, right = st.columns([1.7, 1])
-
-with left:
-    st.subheader("Where to show the ads")
-
-    fig = go.Figure()
-
-    # U6 accessibility corridor (planning aid, not a targeting polygon).
-    if show_u6 and market.get("show_u6", False):
-        u6 = u6_path_frame()
-        fig.add_trace(
-            go.Scattermap(
-                lat=u6["lat"],
-                lon=u6["lon"],
-                mode="lines+markers",
-                name="U6 access corridor",
-                line=dict(width=5, color="rgba(139,92,246,0.85)"),
-                marker=dict(size=8, color="white"),
-                text=u6["name"],
-                hovertemplate="<b>%{text}</b><br>U6 accessibility corridor<extra></extra>",
-            )
-        )
-
-    # Target radius polygons + centre markers.
-    for _, r in zones.loc[zones["budget_eur"].gt(0)].sort_values("priority_score", ascending=False).iterrows():
-        rgb = ROLE_COLORS.get(r["role"], (90, 150, 220))
-        if pd.notna(r.get("measured_score", pd.NA)):
-            rgb = (38, 196, 166) if float(r["measured_score"]) >= 75 else (245, 158, 66) if float(r["measured_score"]) >= 50 else (239, 104, 104)
-        lats, lons = circle_points(float(r["lat"]), float(r["lon"]), float(r["radius_km"]))
-        hover = (
-            f"<b>{r['area']}</b><br>"
-            f"Radius: {float(r['radius_km']):.1f} km<br>"
-            f"Initial geo budget: €{int(r['budget_eur'])}<br>"
-            f"Priority: {int(round(r['display_score']))}/100<br>"
-            f"Age: {r['age']}<br>"
-            f"{r['why']}<br>"
-            f"<i>{r['score_basis']}</i>"
-        )
-
-        fig.add_trace(
-            go.Scattermap(
-                lat=lats,
-                lon=lons,
-                mode="lines",
-                fill="toself",
-                fillcolor=f"rgba({rgb[0]},{rgb[1]},{rgb[2]},0.16)",
-                line=dict(width=2, color=f"rgba({rgb[0]},{rgb[1]},{rgb[2]},0.85)"),
-                name=r["area"],
-                hoverinfo="skip",
-                showlegend=False,
-            )
-        )
-
-        label_text = f"{r['area']}<br>€{int(r['budget_eur'])}" if show_labels else ""
-        fig.add_trace(
-            go.Scattermap(
-                lat=[float(r["lat"])],
-                lon=[float(r["lon"])],
-                mode="markers+text" if show_labels else "markers",
-                marker=dict(size=16 if str(r["role"]).lower().startswith(("venue", "city centre", "centre")) else 13, color=f"rgb({rgb[0]},{rgb[1]},{rgb[2]})"),
-                text=[label_text],
-                textposition="top center",
-                textfont=dict(size=12, color="white" if basemap_name in {"Carto dark", "No tiles (fallback)"} else "#111827"),
-                customdata=[[r["area"], r["radius_km"], r["budget_eur"], r["display_score"], r["age"], r["why"], r["score_basis"]]],
-                hovertemplate=(
-                    "<b>%{customdata[0]}</b><br>"
-                    "Radius: %{customdata[1]:.1f} km<br>"
-                    "Initial geo budget: €%{customdata[2]:.0f}<br>"
-                    "Priority: %{customdata[3]:.0f}/100<br>"
-                    "Age: %{customdata[4]}<br>"
-                    "%{customdata[5]}<br>"
-                    "<i>%{customdata[6]}</i><extra></extra>"
-                ),
-                name=r["area"],
-                showlegend=False,
-            )
-        )
-
-    # Always show the screening destination, even when testing another city.
-    fig.add_trace(
-        go.Scattermap(
-            lat=[48.259828], lon=[11.670136], mode="markers+text",
-            marker=dict(size=18, color="white"), text=["★ ESO Supernova"],
-            textposition="bottom center",
-            textfont=dict(size=13, color="white" if basemap_name in {"Carto dark", "No tiles (fallback)"} else "#111827"),
-            hovertemplate="<b>ESO Supernova</b><br>Karl-Schwarzschild-Str. 2, Garching<br>Screening venue — demand baseline remains ESO-specific<extra></extra>",
-            name="ESO Supernova", showlegend=False,
-        )
-    )
-
-    center = market.get("center", {"lat": 48.215, "lon": 11.625})
-    fig.update_layout(
-        map=dict(
-            style=MAP_STYLE,
-            center=dict(lat=float(center["lat"]), lon=float(center["lon"])),
-            zoom=10.25 if not market.get("custom") else 10.0,
-        ),
-        margin=dict(l=0, r=0, t=0, b=0),
-        height=650,
-        showlegend=False,
-        paper_bgcolor="#0b1118",
-        plot_bgcolor="#0b1118",
-        uirevision="resolution-map-v8-8",
-    )
-
-    st.plotly_chart(fig, width="stretch", config={"displaylogo": False, "scrollZoom": True})
-    st.caption(f"The circles are proposed paid-ad test radii for {market['label']}. The ESO star is the fixed screening venue. Transit lines are planning context only, not targeting objects.")
-
-with right:
-    st.subheader("Exact first test")
-    for _, r in zones.loc[zones["budget_eur"].gt(0)].sort_values("priority_score", ascending=False).iterrows():
-        extra = ""
-        if pd.notna(r.get("ticket_cpa", pd.NA)):
-            extra = f"<br><b>Measured CPA:</b> €{float(r['ticket_cpa']):.2f} • {int(r.get('tickets', 0))} attributed tickets"
-        st.markdown(
-            f"""
-        <div class="map-card">
-          <b>{r['area']}</b><br>
-          <span class="small-muted">{r['role']} • {r['radius_km']:.1f} km radius • age {r['age']}</span><br><br>
-          <b>€{int(r['budget_eur'])}</b> initial geo spend<br>
-          Priority <b>{int(round(r['display_score']))}/100</b>{extra}<br>
-          <span class="small-muted">{r['why']}<br>Creative: {r['creative']}</span>
-        </div>
-        """,
-            unsafe_allow_html=True,
-        )
-        st.write("")
-
-st.divider()
-
-# Clear executive allocation summary.
-st.subheader("€500 campaign allocation")
-allocation = pd.DataFrame(
-    [
-        ["Meta — first-wave zones", meta["geo_budget"], "Three geographies × two creatives"],
-        ["Later age and retargeting tests", meta["later_tests"], "Conditional learning spend"],
-        ["Google Search", meta["search_budget"], f"High-intent searches, {meta['search_area']}"],
-        ["Winner reserve", meta["scale_reserve"], "Move only to the measured best geo/audience/creative"],
-    ],
-    columns=["Bucket", "Budget €", "Purpose"],
+fig = go.Figure()
+for radius, name, fill, line in [
+    (50, "Zone C · Expansion", "rgba(181,107,21,.06)", "rgba(181,107,21,.45)"),
+    (30, "Zone B · Munich catchment", "rgba(43,93,145,.08)", "rgba(43,93,145,.55)"),
+    (15, "Zone A · Core", "rgba(8,126,131,.11)", "rgba(8,126,131,.70)"),
+]:
+    lats,lons=circle(lat0,lon0,radius)
+    fig.add_trace(go.Scattermap(lat=lats,lon=lons,mode="lines",fill="toself",fillcolor=fill,line=dict(color=line,width=2),name=name,hoverinfo="name"))
+fig.add_trace(go.Scattermap(
+    lat=[lat0],lon=[lon0],mode="markers+text",marker=dict(size=18,color="#14283D"),
+    text=["ESO Supernova"],textposition="top center",name="ESO Supernova",
+    hovertemplate="<b>ESO Supernova</b><br>Resolution screening venue<extra></extra>",
+))
+fig.update_layout(
+    map=dict(style="open-street-map",center=dict(lat=lat0,lon=lon0),zoom=7.8),
+    height=650,margin=dict(l=0,r=0,t=0,b=0),showlegend=True,
+    legend=dict(orientation="h",yanchor="bottom",y=1.01,xanchor="left",x=0),
 )
-st.dataframe(allocation, width="stretch", hide_index=True)
+st.plotly_chart(fig,width="stretch",config={"displaylogo":False,"scrollZoom":True})
 
-st.subheader("Ad sets to create")
-adsets = zones.loc[zones["budget_eur"].gt(0), ["area", "radius_km", "age", "budget_eur", "display_score", "creative", "why"]].copy()
-adsets.columns = ["Ad set / map zone", "Radius km", "Age", "Initial €", "Priority", "Creative angle", "Why test here"]
-st.dataframe(adsets.sort_values("Priority", ascending=False), width="stretch", hide_index=True)
+st.markdown("## Operating geography")
+st.dataframe(geography_plan(),hide_index=True,width="stretch")
+st.info("The circles are **planning catchments**, not proof that every location inside them performs equally. Real campaign data should decide whether Zone B or C deserves more spend.")
 
-c1, c2, c3 = st.columns(3)
-with c1:
-    st.markdown(
-        """
-    <div class="map-card"><b>1 • Keep geo tests separate</b><br><br>
-    One zone = one ad set. Never combine Garching, Studentenstadt and Schwabing in the first test, otherwise the model cannot learn which geography actually performs.<br><br>
-    <span class="small-muted">Use the same creative and objective when comparing geographies.</span></div>
-    """,
-        unsafe_allow_html=True,
-    )
-with c2:
-    st.markdown(
-        f"""
-    <div class="map-card"><b>2 • Search is separate</b><br><br>
-    Keep <b>€{meta['search_budget']:.0f}</b> for high-intent Google Search. It should not be interpreted as one of the circles on the map.<br><br>
-    <span class="small-muted">Track the same destination URL/UTM structure so search can be compared against Meta.</span></div>
-    """,
-        unsafe_allow_html=True,
-    )
-with c3:
-    st.markdown(
-        f"""
-    <div class="map-card"><b>3 • Protect the reserve</b><br><br>
-    Hold <b>€{meta['scale_reserve']:.0f}</b> until the first data shows a winner. Then concentrate it instead of spreading it equally.<br><br>
-    <span class="small-muted">This is where the campaign changes from prediction to evidence-based scaling.</span></div>
-    """,
-        unsafe_allow_html=True,
-    )
+st.markdown("## Practical setup")
+st.markdown("""
+**Meta / Instagram / Facebook**
+- Start with **Zone A (0–15 km)** and **Zone B (15–30 km)**.
+- Audience: adults 20–60, broad enough for the algorithm to learn.
+- Use only the two approved creative angles.
+- Keep the screening date in the ad so spend can be tied to the Tuesday that needs help.
 
-if not measured.empty:
-    st.subheader("Measured geography performance")
-    st.dataframe(measured, width="stretch", hide_index=True)
-else:
-    st.caption("No measured geo performance yet. Add campaign rows with `area`, `spend_eur` and `tickets_attributed` to `data/campaign_history.csv`. The map will then add real CPA/ticket performance automatically.")
+**Google Search**
+- Target Munich/Garching catchment and high-intent queries around planetarium, immersive experience and local February events.
+- Send traffic directly to the most relevant available booking page.
+
+**Zone C (30–50 km)**
+- Do not activate by default.
+- Use only when the nearer catchment has enough delivery, cost is acceptable and a screening is still below its booking curve.
+""")
+
+st.markdown("## What changes after sales start")
+st.dataframe(
+    __import__("pandas").DataFrame([
+        ["Show on track","No expansion","€0 extra"],
+        ["Show in WATCH","Zone A + strongest nearby catchment","Small 72-hour correction"],
+        ["Show in ACTION","Zone A + B; test C only if needed","€15–€25/day for 72h"],
+        ["Show near full","Stop ads for that date","Promote next available Tuesday"],
+    ],columns=["Ticket state","Geography action","Budget action"]),
+    hide_index=True,width="stretch",
+)
