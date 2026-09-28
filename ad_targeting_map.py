@@ -31,21 +31,21 @@ def _normalise_weights(zones: pd.DataFrame) -> pd.DataFrame:
 
 def planned_zones(
     total_budget: float = 500,
-    validation_budget: float = 240,
-    search_budget: float = 40,
+    validation_budget: float = 100,
+    search_budget: float = 30,
     market: dict | None = None,
 ) -> Tuple[pd.DataFrame, Dict[str, float]]:
     """Return the selected city's balanced first-wave zones.
 
-    Geography is a test choice, not a learned success probability. The first wave
-    always spends EUR 90 across three zones (EUR 30/zone, split across two
-    creatives in the experiment page).
+    Geography is a test choice, not a learned success probability. The controlled
+    first test uses EUR 70 of Meta spend across the two closest test zones; the
+    remaining EUR 30 of the EUR 100 first-test ceiling is reserved for Google Search.
     """
     market = market or get_market()
     total_budget = max(0.0, float(total_budget))
     validation_budget = min(max(0.0, float(validation_budget)), total_budget)
     search_budget = min(max(0.0, float(search_budget)), validation_budget)
-    geo_budget = min(90.0, validation_budget)
+    geo_budget = min(70.0, max(0.0, validation_budget - search_budget))
     later_tests = max(0.0, validation_budget - search_budget - geo_budget)
     scale_reserve = max(0.0, total_budget - validation_budget)
 
@@ -61,7 +61,7 @@ def planned_zones(
             "why": "Selected market",
             "creative": "Two creative variants",
         }])
-    zones = zones.head(3).copy()
+    zones = zones.head(2).copy()
     zones["priority_score"] = 100
     zones["test_weight"] = 1 / max(1, len(zones))
     zones = _normalise_weights(zones)
