@@ -1,6 +1,6 @@
 # Project plan — Resolution @ ESO marketing intelligence
 
-Current checkpoint (24 September 2026): 26 canonical ESO booking/day observations from 13 shows; no Resolution booking IDs or campaign rows. The empirical curve is the operational baseline; the grouped-validated ML candidate fails the MAE gate. The only authorised initial paid action after a no-paid window is the EUR 90 six-cell Meta test. The other EUR 410 remains conditional. Historical `next_training_tests.csv` from an older 24-cell plan is archived under `data/backups/` and is not used.
+Current checkpoint (24 September 2026): 26 canonical ESO booking/day observations from 13 shows; no Resolution booking IDs or campaign rows. The empirical curve is the operational baseline; the grouped-validated ML candidate fails the MAE gate. The only authorised initial paid action after the organic baseline is the EUR 100 controlled test: EUR 70 Meta + EUR 30 Google. The other EUR 400 remains conditional. Historical `next_training_tests.csv` from an older 24-cell plan is archived under `data/backups/` and is not used.
 
 ## 1. Objective
 
@@ -57,8 +57,8 @@ The ticket-lift model is intentionally locked until sufficient labels, geography
 ## 4. Locked campaign budget
 
 - Total: EUR 500
-- Learning: EUR 240
-- Protected scale reserve: EUR 260
+- Controlled first test: EUR 100
+- Conditional remainder: EUR 400
 
 The complete testing protocol is defined before launch; the reserve is not assigned until evidence exists.
 
