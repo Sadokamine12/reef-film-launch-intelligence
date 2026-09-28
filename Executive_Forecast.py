@@ -1,9 +1,7 @@
 """Compact management command center for Resolution @ ESO Supernova."""
 from __future__ import annotations
 
-from datetime import datetime
 from html import escape
-from zoneinfo import ZoneInfo
 
 import pandas as pd
 import plotly.graph_objects as go
@@ -224,9 +222,6 @@ def main() -> None:
 .main-sub b{color:#102A43}
 .venue-id{display:flex;align-items:center;gap:9px;font-size:9px;color:#23445F;line-height:1.25;text-align:left}
 .venue-logo{font-size:27px;color:#244F70}
-.topbar{height:34px;margin:-10px -18px 8px;padding:0 18px;border-bottom:1px solid #E1E8EE;background:white;display:flex;justify-content:flex-end;align-items:center;gap:7px}
-.top-chip{border:1px solid #E1E8EE;background:#FBFCFD;border-radius:7px;padding:5px 9px;font-size:9px;color:#24425D}
-.top-avatar{width:23px;height:23px;border-radius:50%;display:inline-grid;place-items:center;background:#11344E;color:white;font-size:8px;font-weight:800}
 .hero-img{height:200px;border-radius:9px;background-color:#0A2238;background-size:cover;background-position:center;position:relative;overflow:hidden}
 .hero-img:after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(4,17,31,.05),rgba(4,17,31,.72))}
 .hero-film-title{position:absolute;z-index:2;left:22px;top:20px;color:white;font-family:Georgia,serif;letter-spacing:.22em;font-size:19px}
@@ -306,16 +301,8 @@ def main() -> None:
     capacity = total_capacity(cfg)
     sold_total = int(plan["sold"].dropna().sum()) if plan["sold"].notna().any() else None
     target_total = int(plan["target_today"].dropna().sum()) if plan["target_today"].notna().any() else None
-    now = datetime.now(ZoneInfo("Europe/Berlin"))
-
     st.html(
         f"""
-        <div class="topbar">
-          <span class="top-chip">Resolution⌄</span>
-          <span class="top-chip">▣ &nbsp;{now.strftime("%d %b %Y")}</span>
-          <span class="top-chip">● &nbsp;ESO Supernova, Garching</span>
-          <span class="top-avatar">MT</span><span class="top-chip">Management Team⌄</span>
-        </div>
         <div class="main-title-row">
           <div>
             <h1>Resolution Ticket Sales Command Center</h1>
