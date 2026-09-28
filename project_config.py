@@ -75,6 +75,18 @@ DEFAULT_CONFIG = {
         "incremental_tickets_per_click": 0.045,
         "status": "unverified scenario assumption",
     },
+    "launch_plan": {
+        "sales_open_target": "2026-11-16",
+        "paid_test_start": "2027-01-04",
+        "paid_test_end": "2027-01-10",
+        "initial_test_budget_eur": 100,
+        "meta_budget_ceiling_eur": 300,
+        "google_budget_ceiling_eur": 125,
+        "tactical_reserve_eur": 75,
+        "target_final_tickets_per_show": 98,
+        "review_hours_after_sales_open": 48,
+        "target_curve": {"60": 8, "45": 15, "30": 25, "21": 38, "14": 55, "7": 75, "3": 88, "0": 98},
+    },
     "tracking": {
         "resolution_booking_urls": [],
         "utm_source_pattern": "meta|google",
