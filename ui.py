@@ -87,6 +87,16 @@ header[data-testid="stHeader"]{display:none!important}
   color:#D4E0EA!important;
   font-size:12px!important;
   gap:8px!important;
+  text-decoration:none!important;
+}
+[data-testid="stSidebar"] .stPageLink a p,
+[data-testid="stSidebar"] .stPageLink a span,
+[data-testid="stSidebar"] .stPageLink a div{
+  color:#D4E0EA!important;
+}
+[data-testid="stSidebar"] .stPageLink a svg{
+  color:#D4E0EA!important;
+  fill:currentColor!important;
 }
 [data-testid="stSidebar"] .stPageLink a:hover{
   background:#113C5C!important;
@@ -94,6 +104,12 @@ header[data-testid="stHeader"]{display:none!important}
 }
 [data-testid="stSidebar"] .stPageLink a[aria-current="page"]{
   background:#0E4D70!important;
+  color:#55D4E1!important;
+}
+[data-testid="stSidebar"] .stPageLink a[aria-current="page"] p,
+[data-testid="stSidebar"] .stPageLink a[aria-current="page"] span,
+[data-testid="stSidebar"] .stPageLink a[aria-current="page"] div,
+[data-testid="stSidebar"] .stPageLink a[aria-current="page"] svg{
   color:#55D4E1!important;
 }
 [data-testid="stSidebar"] .stPageLink svg{width:16px!important;height:16px!important}
