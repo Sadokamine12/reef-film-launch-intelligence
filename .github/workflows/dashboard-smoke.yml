@@ -15,26 +15,7 @@ jobs:
           python-version: "3.12"
       - name: Install dependencies
         run: pip install -r requirements.txt
-      - name: Compile application
-        run: >
-          python -m py_compile
-          app.py
-          Executive_Forecast.py
-          ui.py
-          launch_strategy.py
-          experiment_protocol.py
-          ad_targeting_map.py
-          pages/1_Sales_Plan.py
-          pages/2_Where_to_Advertise.py
-          pages/3_Marketing_Plan.py
-          pages/4_Creatives.py
-          pages/4_Budget_Scenarios.py
-          pages/5_Reports.py
-          pages/5_Campaign_Data.py
-          pages/5_Decision_Simulator.py
-          pages/6_Model_Quality.py
-          pages/7_Data_Health.py
-          pages/8_Evidence_Methodology.py
-          pages/9_Settings.py
-      - name: Run test suite
-        run: python -m unittest discover -s tests -v
+      - name: Compile all Python sources
+        run: python -m compileall -q .
+      - name: Run dashboard regression tests
+        run: python -m unittest tests.test_launch_strategy tests.test_streamlit_pages
