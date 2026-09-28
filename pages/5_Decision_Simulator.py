@@ -42,9 +42,9 @@ coverage = eso_coverage()
 with st.sidebar:
     st.markdown("### Scenario inputs")
     market = select_market()
-    budget = st.slider("Budget ceiling (EUR)", 0, 500, 90, 15)
+    budget = st.slider("Budget ceiling (EUR)", 0, 500, 100, 25)
     days_to_event = st.slider("Campaign starts this many days before first show", 7, 60, 28)
-    st.caption("Before controlled lift data exists, the model releases at most the planned EUR 240 learning budget.")
+    st.caption("Before controlled lift data exists, the model releases at most the EUR 100 controlled first-test budget.")
 
 market_meta = market_prediction_context(market, project)
 baseline_sim, _ = hybrid_simulation(0, model=marketing, cfg=flat, emp_stats=empirical, days_to_event=days_to_event, n=7000, seed=101, market=market)
