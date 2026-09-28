@@ -56,11 +56,11 @@ def render_topbar() -> None:
     st.html(
         f"""
         <div class="reef-global-topbar">
-          <span class="reef-top-chip">Resolution⌄</span>
+          <span class="reef-top-chip">Project · Resolution</span>
           <span class="reef-top-chip">▣ &nbsp;{now.strftime("%d %b %Y")}</span>
           <span class="reef-top-chip">● &nbsp;ESO Supernova, Garching</span>
           <span class="reef-top-avatar">MT</span>
-          <span class="reef-top-chip">Management Team⌄</span>
+          <span class="reef-top-chip">Management Team</span>
         </div>
         """
     )
@@ -85,7 +85,7 @@ header[data-testid="stHeader"]{display:none!important}
 [data-testid="stDecoration"]{display:none!important}
 [data-testid="stStatusWidget"]{display:none!important}
 .block-container{
-  max-width:none!important;
+  max-width:1600px!important;
   padding:10px 18px 28px 18px!important;
 }
 .reef-global-topbar{
@@ -169,7 +169,8 @@ header[data-testid="stHeader"]{display:none!important}
 .reef-side-brand span{font-weight:400;color:#D7E1EA;font-size:13px}
 .reef-side-mark{font-size:25px;line-height:1;color:#EAF7FA;transform:rotate(-20deg)}
 .reef-side-photo{
-  min-height:350px;
+  min-height:380px;
+  height:calc(100vh - 410px);
   margin-top:28px;
   background-position:center;
   background-size:cover;
