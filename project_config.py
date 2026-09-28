@@ -64,8 +64,8 @@ DEFAULT_CONFIG = {
     },
     "marketing": {
         "total_budget_eur": 500,
-        "experiment_budget_eur": 240,
-        "scale_reserve_eur": 260,
+        "experiment_budget_eur": 100,
+        "scale_reserve_eur": 400,
         "success_occupancy_pct": 60,
         "target_incremental_tickets": 40,
         "max_incremental_cpa_eur": 10,
