@@ -26,7 +26,7 @@ def status_class(status: str) -> str:
         "WATCH": "reef-pill-amber",
         "ACTION": "reef-pill-red",
         "PRE-LAUNCH": "reef-pill-blue",
-        "WAITING FOR DATA": "reef-pill-gray",
+        "NEAR FULL": "reef-pill-green",\n        "WAITING FOR DATA": "reef-pill-gray",
     }.get(status, "reef-pill-gray")
 
 
@@ -204,10 +204,10 @@ def main() -> None:
 
     with st.expander("Analyst / model details"):
         st.write("The executive page intentionally hides model-quality metrics. Detailed demand evidence, attribution limits and model validation remain available in the secondary pages.")
-        st.page_link("pages/1_Sales_Forecast.py", label="Open Sales Forecast")
+        st.page_link("pages/1_Sales_Plan.py", label="Open Sales Plan")
         st.page_link("pages/5_Campaign_Data.py", label="Open Campaign Data")
         st.page_link("pages/6_Model_Quality.py", label="Open Model Quality")
-        st.page_link("pages/8_Evidence_Methodology.py", label="Open Evidence & Methodology")
+        st.page_link("pages/3_Marketing_Plan.py", label="Open Marketing Plan")
 
 
 if __name__ == "__main__":
