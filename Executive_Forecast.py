@@ -193,7 +193,7 @@ Paid-media lift must remain a scenario until real campaign and attribution data 
         )
         c1, c2, c3 = st.columns(3)
         with c1:
-            st.page_link("pages/1_Sales_Forecast.py", label="Open detailed sales evidence")
+            st.page_link("pages/1_Sales_Plan.py", label="Open detailed sales evidence")
         with c2:
             st.page_link("pages/5_Campaign_Data.py", label="Open campaign data")
         with c3:
