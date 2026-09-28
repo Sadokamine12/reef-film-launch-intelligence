@@ -217,6 +217,9 @@ def main() -> None:
     st.markdown(
         """
 <style>
+.top-utility{display:flex;justify-content:flex-end;align-items:center;gap:6px;margin:-2px 0 7px;min-height:28px}
+.top-chip{display:inline-flex;align-items:center;gap:5px;border:1px solid #DFE7ED;background:#FFF;border-radius:7px;padding:5px 8px;font-size:8px;color:#31516A;white-space:nowrap}
+.top-avatar{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;background:#123A56;color:#FFF;font-size:7px;font-weight:800}
 .main-title-row{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;margin:3px 0 9px}
 .main-sub{font-size:12px;color:#29455E;margin-top:3px}
 .main-sub b{color:#102A43}
@@ -287,6 +290,20 @@ def main() -> None:
   .show-grid{grid-template-columns:repeat(2,1fr)}
   .kpi-grid{grid-template-columns:repeat(2,1fr)}
   .geo-wrap{grid-template-columns:1fr}
+  .action-meta{grid-template-columns:1fr 1fr}
+}
+@media(max-width:760px){
+  .top-utility{justify-content:flex-start;overflow-x:auto;padding-bottom:3px}
+  .main-title-row{display:block}
+  .venue-id{margin-top:7px}
+  .kpi-grid{grid-template-columns:1fr 1fr}
+  .show-grid{grid-template-columns:1fr}
+  .action-meta{grid-template-columns:1fr}
+  .action-panel{height:auto;min-height:215px}
+  .hero-img{height:180px}
+  .plan-row{grid-template-columns:22px 1fr}
+  .plan-row>div:nth-child(3),.plan-row>div:nth-child(4){grid-column:2}
+  .creative-grid{grid-template-columns:1fr}
 }
 </style>
         """,
@@ -303,6 +320,13 @@ def main() -> None:
     target_total = int(plan["target_today"].dropna().sum()) if plan["target_today"].notna().any() else None
     st.html(
         f"""
+        <div class="top-utility">
+          <span class="top-chip">Resolution ▾</span>
+          <span class="top-chip">Sales target · 16 Nov 2026</span>
+          <span class="top-chip">● ESO Supernova · Garching</span>
+          <span class="top-avatar">MT</span>
+          <span class="top-chip">Management Team ▾</span>
+        </div>
         <div class="main-title-row">
           <div>
             <h1>Resolution Ticket Sales Command Center</h1>
