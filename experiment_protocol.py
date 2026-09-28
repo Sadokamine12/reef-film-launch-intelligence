@@ -81,7 +81,7 @@ def campaign_timeline() -> pd.DataFrame:
     rows = [
         (
             "P0",
-            date.today(),
+            min(date.today(), sales_open),
             sales_open,
             "Launch readiness",
             0,
