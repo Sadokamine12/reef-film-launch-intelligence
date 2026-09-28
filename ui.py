@@ -37,7 +37,7 @@ def render_sidebar() -> None:
         st.page_link("pages/3_Marketing_Plan.py", label="◈  Campaign Plan")
         st.page_link("pages/2_Where_to_Advertise.py", label="●  Audiences")
         st.page_link("pages/4_Creatives.py", label="▣  Creatives")
-        st.page_link("pages/5_Reports.py", label="▤  Reports")
+        st.page_link("pages/6_Reports.py", label="▤  Reports")
         st.page_link("pages/9_Settings.py", label="⚙  Settings")
         st.markdown(
             f"""
