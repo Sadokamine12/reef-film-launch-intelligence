@@ -93,5 +93,26 @@
         "scenario_driver": "Final screening combines mature remarketing and last-chance urgency, partly offset by late-run fatigue."
       }
     }
+  },
+  "launch_plan": {
+    "sales_open_target": "2026-11-16",
+    "paid_test_start": "2027-01-04",
+    "paid_test_end": "2027-01-10",
+    "initial_test_budget_eur": 100,
+    "meta_budget_ceiling_eur": 300,
+    "google_budget_ceiling_eur": 125,
+    "tactical_reserve_eur": 75,
+    "target_final_tickets_per_show": 98,
+    "review_hours_after_sales_open": 48,
+    "target_curve": {
+      "0": 98,
+      "3": 88,
+      "7": 75,
+      "14": 55,
+      "21": 38,
+      "30": 25,
+      "45": 15,
+      "60": 8
+    }
   }
 }
