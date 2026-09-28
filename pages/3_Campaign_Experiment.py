@@ -1,77 +1,65 @@
+"""Marketing Plan — where, when and how much to advertise."""
 from __future__ import annotations
 
 import pandas as pd
-import plotly.express as px
 import streamlit as st
 
-from experiment_protocol import build_experiment_plan, campaign_timeline, attribution_requirements
+from launch_strategy import channel_budget, creative_plan, geography_plan, launch_cfg, marketing_timeline
 from project_config import load_config
-from ui import apply_theme, page_intro, select_market
+from ui import apply_theme, page_intro
 
-st.set_page_config(page_title="Resolution Experiment Plan", page_icon="🧪", layout="wide")
+st.set_page_config(page_title="Marketing Plan | REEF", page_icon="📣", layout="wide")
 apply_theme()
-page_intro("Campaign decisions", "EUR 500 Experiment", "Choose a target city, run a balanced first test, then spend conditionally from measured results.")
+page_intro("Commercial execution", "Marketing Plan", "A practical calendar for where to advertise, when to start, how much to spend, and when to stop.")
 
 cfg = load_config()
-with st.sidebar:
-    st.markdown("### Test market")
-    market = select_market()
-    st.caption("The experiment plan updates for this city. The ESO venue and demand baseline stay fixed.")
-plan = build_experiment_plan(market)
-timeline = campaign_timeline()
+launch = launch_cfg(cfg)
 
-m = cfg["marketing"]
 c1,c2,c3,c4 = st.columns(4)
-c1.metric("Total budget", f"€{m['total_budget_eur']:.0f}")
-c2.metric("Learning budget", f"€{m['experiment_budget_eur']:.0f}")
-c3.metric("Protected scale reserve", f"€{m['scale_reserve_eur']:.0f}")
-c4.metric("Target", f"{m['success_occupancy_pct']:.0f}%+ occupancy")
-st.info(f"**Selected test market: {market['label']} · Current action: EUR 0.** Prepare the six first-wave ads for this city, then record a no-paid Resolution booking window. Release the EUR 90 first wave only after bookings are live; keep the EUR 260 scale reserve conditional.")
+c1.metric("Campaign ceiling", "€500")
+c2.metric("First paid test", f"€{int(launch['initial_test_budget_eur'])}")
+c3.metric("Meta ceiling", f"€{int(launch['meta_budget_ceiling_eur'])}")
+c4.metric("Google ceiling", f"€{int(launch['google_budget_ceiling_eur'])}")
 
-st.subheader("Campaign spending sequence")
-fig = px.bar(timeline, x="budget_eur", y="name", orientation="h", text="budget_eur", hover_data=["start_date","end_date","action","primary_measure"])
-fig.update_layout(height=400, xaxis_title="Planned paid spend (€)", yaxis_title="")
-st.plotly_chart(fig, width="stretch")
-with st.expander("Dates, dependencies, and measurement for each phase"):
-    st.dataframe(timeline, width="stretch", hide_index=True)
+st.markdown("## 1. When")
+st.dataframe(marketing_timeline(cfg),hide_index=True,width="stretch")
+st.success("Default rule: do not spend because budget exists. Spend only when the booking curve says a screening needs help.")
 
-st.subheader(f"First test in {market['label']}: three areas × two creatives")
-first_wave = plan[plan["wave"].eq("Geo + creative")][["city", "area", "creative", "age_band", "planned_spend_eur"]].copy()
-st.dataframe(first_wave.rename(columns={"city":"City", "area":"Area", "creative":"Creative", "age_band":"Audience", "planned_spend_eur":"EUR per cell"}), width="stretch", hide_index=True)
-with st.expander("See the full EUR 240 learning plan"):
-    st.dataframe(plan, width="stretch", hide_index=True)
-    st.caption("Wave 2 areas and creative are selected from first-wave evidence; their placeholders are intentionally unassigned today.")
+st.markdown("## 2. Where")
+st.dataframe(geography_plan(),hide_index=True,width="stretch")
+st.markdown("**Primary catchment:** ESO/Garching + north Munich and U6-accessible audiences. **Do not start Germany-wide.** Expand to 30–50 km only after the nearer zones have enough delivery and a show is still behind target.")
 
-st.subheader("3. Decision gates — when money is allowed to move")
-gates = pd.DataFrame([
-    ["After W0", "Resolution booking pages live and 48h no-paid seat movement recorded", "Start paid learning"],
-    ["After W1", "Compare geo + creative on CTR/LPV and verified ticket signal if available", "Select top 2 geos + creative"],
-    ["After W2", "Age split has enough spend/impressions for a stable direction", "Keep or drop age segmentation"],
-    ["Before scale", "Purchase attribution works OR total-seat lift is materially above baseline", "Release part of €260 reserve"],
-    ["After each Tuesday", "Actual seat curve vs empirical ESO curve", "Reallocate remaining reserve for next Tuesday"],
-], columns=["Gate","Evidence required","Decision"])
-st.dataframe(gates, width="stretch", hide_index=True)
+st.markdown("## 3. How much")
+budget = channel_budget(cfg)
+st.dataframe(budget,hide_index=True,width="stretch")
+st.caption("The reserve is intentionally uncommitted. It can remain unspent.")
 
-st.subheader("4. Attribution — fixed requirement, not a later surprise")
-attr = attribution_requirements()
-st.dataframe(attr, width="stretch", hide_index=True)
-st.error("If ESO provides only total remaining seats and no purchase-source signal, the system can estimate **overall campaign lift**, but it cannot honestly train a ticket-sales model that says Garching ads caused more purchases than Schwabing ads. Geo winner claims require purchase attribution or a controlled source code/report.")
-
-st.subheader("5. Creative protocol")
-creative = pd.DataFrame([
-    ["A — SXSW proof", "Award / social proof", "Use exactly the same core edit across geos in Wave 1"],
-    ["B — Music + 360", "Immersive experience", "Same duration/CTA as A so creative is the main changed variable"],
-    ["Scale creative", "Winner from Wave 1", "Use only after measured evidence"],
-], columns=["Creative","Message","Rule"])
-st.dataframe(creative, width="stretch", hide_index=True)
-
-st.subheader("6. Data captured every day")
+st.markdown("## 4. What to advertise")
+st.dataframe(creative_plan(),hide_index=True,width="stretch")
 st.markdown("""
-- ESO remaining seats for each Resolution Tuesday and comparable ESO shows.
-- Spend, impressions, 75% video views, clicks and landing-page views by ad set.
-- Geo, age band, creative, channel, campaign/ad-set IDs and UTM values.
-- Verified ticket label when available, including its **label source**.
-- Campaign on/off window and control/baseline periods.
+**Creative A — Experience:** use the strongest immersive dome/music footage.  
+**Creative B — Event:** exact Tuesday, ESO Supernova, Garching/U6, strong ticket CTA.
 
-The system trains engagement first. Ticket-lift ML is promoted to operational only after verified ticket labels exist and validation passes.
+Keep the two creatives comparable in duration and destination so the result is measurable.
+""")
+
+st.markdown("## 5. 72-hour operating rule")
+st.dataframe(pd.DataFrame([
+    ["ON TRACK","Sales ≥ target","€0","Keep organic/owned activity; protect budget"],
+    ["WATCH","80–99% of target","€8–€12/day","Run a small 72-hour correction, then review"],
+    ["ACTION","<80% of target","€15–€25/day","Run recovery campaign for the weak Tuesday, then review"],
+    ["NEAR FULL","~95–100 tickets","€0","Stop that ad and promote the next available screening"],
+],columns=["State","Trigger","Paid level","Action"]),hide_index=True,width="stretch")
+
+st.markdown("## 6. Measurement")
+st.markdown("""
+Track daily, per screening:
+- tickets sold and remaining seats,
+- 3-day and 7-day sales pace,
+- campaign start/stop timestamps,
+- spend, impressions, clicks and landing-page visits by channel,
+- geography and creative,
+- purchase/source attribution if ESO can provide it.
+
+If purchase attribution is unavailable, the dashboard can still compare total seat pace before/during/after campaigns, but it should not claim that one geography caused a specific ticket sale.
 """)
