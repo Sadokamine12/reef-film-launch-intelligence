@@ -2,6 +2,9 @@
 from __future__ import annotations
 
 import os
+from datetime import datetime
+from zoneinfo import ZoneInfo
+
 import streamlit as st
 
 
@@ -48,6 +51,21 @@ def render_sidebar() -> None:
         )
 
 
+def render_topbar() -> None:
+    now = datetime.now(ZoneInfo("Europe/Berlin"))
+    st.html(
+        f"""
+        <div class="reef-global-topbar">
+          <span class="reef-top-chip">Resolution⌄</span>
+          <span class="reef-top-chip">▣ &nbsp;{now.strftime("%d %b %Y")}</span>
+          <span class="reef-top-chip">● &nbsp;ESO Supernova, Garching</span>
+          <span class="reef-top-avatar">MT</span>
+          <span class="reef-top-chip">Management Team⌄</span>
+        </div>
+        """
+    )
+
+
 def apply_theme() -> None:
     st.markdown(
         """
@@ -69,6 +87,32 @@ header[data-testid="stHeader"]{display:none!important}
 .block-container{
   max-width:none!important;
   padding:10px 18px 28px 18px!important;
+}
+.reef-global-topbar{
+  height:34px;
+  margin:-10px -18px 8px;
+  padding:0 18px;
+  border-bottom:1px solid #E1E8EE;
+  background:#fff;
+  display:flex;
+  justify-content:flex-end;
+  align-items:center;
+  gap:7px;
+}
+.reef-top-chip{
+  border:1px solid #E1E8EE;
+  background:#FBFCFD;
+  border-radius:7px;
+  padding:5px 9px;
+  font-size:9px;
+  color:#24425D;
+  white-space:nowrap;
+}
+.reef-top-avatar{
+  width:23px;height:23px;border-radius:50%;
+  display:inline-grid;place-items:center;
+  background:#11344E;color:white;
+  font-size:8px;font-weight:800;
 }
 [data-testid="stSidebar"]{
   background:#08263F!important;
@@ -235,6 +279,7 @@ div[data-testid="stVerticalBlockBorderWrapper"] > div{padding:10px 11px!importan
         unsafe_allow_html=True,
     )
     render_sidebar()
+    render_topbar()
 
 
 def page_intro(section: str, title: str, description: str) -> None:
