@@ -9,11 +9,11 @@ Maximize useful learning first, then spend the remaining budget where real evide
 | Phase | Purpose | Planned spend |
 |---|---|---:|
 | Baseline | Observe Resolution sales with no paid media | EUR 0 |
-| Wave 1 | Geography + creative | EUR 90 |
-| Wave 2 | Age refinement on winners | EUR 80 |
+| First paid test | Meta: two zones × two creative angles | EUR 70 |
+| First paid test | Google Search: high intent | EUR 30 |
 | Search | High-intent demand | EUR 40 |
 | Retargeting | Warm audience if pool is large enough | EUR 30 |
-| Scale reserve | Best validated cell(s) | EUR 260 |
+| Scale reserve | Best validated cell(s) | EUR 400 |
 | **Total** |  | **EUR 500** |
 
 ## Phase 0 — no-paid baseline
@@ -33,7 +33,7 @@ Test two creatives:
 - SXSW / award-proof angle
 - Music + 360° immersive-experience angle
 
-Six Meta cells at EUR 15 = EUR 90.
+Four Meta cells at EUR 17.50 = EUR 70. Google Search receives EUR 30 in the same controlled test window.
 
 Primary early metrics: qualified landing-page visits, CTR, video completion, and verified purchases if available.
 
@@ -58,7 +58,7 @@ Use exact/phrase-like intent where practical; avoid broad generic entertainment 
 
 EUR 30 only if there is a sufficiently large warm audience. If not, leave that money unspent or roll it into the scale reserve.
 
-## EUR 260 scale decision
+## EUR 400 scale decision
 
 Scale only after evaluating:
 
