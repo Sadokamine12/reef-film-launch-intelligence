@@ -26,7 +26,8 @@ def status_class(status: str) -> str:
         "WATCH": "reef-pill-amber",
         "ACTION": "reef-pill-red",
         "PRE-LAUNCH": "reef-pill-blue",
-        "NEAR FULL": "reef-pill-green",\n        "WAITING FOR DATA": "reef-pill-gray",
+        "NEAR FULL": "reef-pill-green",
+        "WAITING FOR DATA": "reef-pill-gray",
     }.get(status, "reef-pill-gray")
 
 
