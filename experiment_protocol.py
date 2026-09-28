@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, timedelta
 from pathlib import Path
 import pandas as pd
 
@@ -91,7 +91,7 @@ def campaign_timeline() -> pd.DataFrame:
         (
             "P1",
             sales_open,
-            paid_start - pd.Timedelta(days=1),
+            paid_start - timedelta(days=1),
             "Organic booking baseline",
             0,
             "Keep paid media off and learn the natural Resolution booking pace.",
@@ -108,8 +108,8 @@ def campaign_timeline() -> pd.DataFrame:
         ),
         (
             "P3",
-            paid_end + pd.Timedelta(days=1),
-            first_show - pd.Timedelta(days=2),
+            paid_end + timedelta(days=1),
+            first_show - timedelta(days=2),
             "Conditional scaling",
             0,
             "Release budget only for screenings below the healthy curve and only into evidence-supported channels/areas.",
@@ -117,7 +117,7 @@ def campaign_timeline() -> pd.DataFrame:
         ),
         (
             "P4",
-            first_show - pd.Timedelta(days=1),
+            first_show - timedelta(days=1),
             pd.to_datetime(cfg["screenings"]["dates"][-1]).date(),
             "Show-specific recovery",
             0,
