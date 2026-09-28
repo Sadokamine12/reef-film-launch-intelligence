@@ -11,7 +11,7 @@ TEAL = "#087E83"
 BLUE = "#2B5D91"
 AMBER = "#B56B15"
 
-ESO_IMAGE = "https://supernova.eso.org/static/archives/images/screen/PANO0003-CC.jpg"
+ESO_IMAGE = "https://supernova.eso.org/static/archives/images/screen/2018_04_14_Supernova_Night-CC.jpg"
 
 
 def editing_enabled() -> bool:
@@ -29,13 +29,13 @@ def render_sidebar() -> None:
             """,
             unsafe_allow_html=True,
         )
-        st.page_link("app.py", label="Dashboard", icon="🏠")
-        st.page_link("pages/1_Sales_Plan.py", label="Ticket Sales", icon="📊")
-        st.page_link("pages/3_Marketing_Plan.py", label="Campaign Plan", icon="📣")
-        st.page_link("pages/2_Where_to_Advertise.py", label="Audiences", icon="👥")
-        st.page_link("pages/3_Marketing_Plan.py", label="Creatives", icon="🖼️")
-        st.page_link("pages/5_Campaign_Data.py", label="Reports", icon="📄")
-        st.page_link("pages/7_Data_Health.py", label="Settings", icon="⚙️")
+        st.page_link("app.py", label="◆  Dashboard")
+        st.page_link("pages/1_Sales_Plan.py", label="▥  Ticket Sales")
+        st.page_link("pages/3_Marketing_Plan.py", label="◈  Campaign Plan")
+        st.page_link("pages/2_Where_to_Advertise.py", label="●  Audiences")
+        st.page_link("pages/4_Creatives.py", label="▣  Creatives")
+        st.page_link("pages/5_Reports.py", label="▤  Reports")
+        st.page_link("pages/9_Settings.py", label="⚙  Settings")
         st.markdown(
             f"""
             <div class="reef-side-photo" style="background-image:linear-gradient(180deg,rgba(9,35,58,.05),rgba(9,35,58,.88)),url('{ESO_IMAGE}')">
@@ -85,8 +85,10 @@ header[data-testid="stHeader"]{display:none!important}
   border-radius:7px!important;
   padding:8px 10px!important;
   color:#D4E0EA!important;
-  font-size:12px!important;
-  gap:8px!important;
+  font-size:11px!important;
+  font-weight:560!important;
+  letter-spacing:.005em;
+  gap:7px!important;
   text-decoration:none!important;
 }
 [data-testid="stSidebar"] .stPageLink a p,
@@ -120,11 +122,11 @@ header[data-testid="stHeader"]{display:none!important}
   display:flex;align-items:center;gap:7px;
   color:white;font-size:17px;letter-spacing:-.02em;
 }
-.reef-side-brand span{font-weight:400;color:#D7E1EA;font-size:14px}
+.reef-side-brand span{font-weight:400;color:#D7E1EA;font-size:13px}
 .reef-side-mark{font-size:25px;line-height:1;color:#EAF7FA;transform:rotate(-20deg)}
 .reef-side-photo{
-  min-height:360px;
-  margin-top:38px;
+  min-height:350px;
+  margin-top:28px;
   background-position:center;
   background-size:cover;
   display:flex;
