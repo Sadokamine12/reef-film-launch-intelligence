@@ -17,7 +17,7 @@ from ui import apply_theme, INK, MUTED, TEAL
 
 RESOLUTION_IMAGE = "https://reef-distribution.com/wp-content/uploads/2026/03/Resolution_Square-768x768.jpg"
 RESOLUTION_POSTER = "https://reef-distribution.com/wp-content/uploads/2026/03/POSTER_withCredits_40X27CinephonicTagline-768x1138.jpg"
-ESO_IMAGE = "https://supernova.eso.org/static/archives/images/screen/PANO0003-CC.jpg"
+ESO_IMAGE = "https://supernova.eso.org/static/archives/images/screen/2018_04_14_Supernova_Night-CC.jpg"
 
 
 def e(value: object) -> str:
@@ -135,7 +135,7 @@ def operating_plan_html() -> str:
     )
     return f"""
       <div class="section-title">📣 &nbsp;Advertising Operating Plan</div>
-      <div class="segmented"><b>When</b><span>Where</span><span>How Much</span></div>
+      <div class="segmented" aria-label="Plan dimensions"><b>When</b><span>Where</span><span>Budget</span></div>
       <div class="plan-list">{body}</div>
     """
 
@@ -227,7 +227,7 @@ def main() -> None:
 .topbar{height:34px;margin:-10px -18px 8px;padding:0 18px;border-bottom:1px solid #E1E8EE;background:white;display:flex;justify-content:flex-end;align-items:center;gap:7px}
 .top-chip{border:1px solid #E1E8EE;background:#FBFCFD;border-radius:7px;padding:5px 9px;font-size:9px;color:#24425D}
 .top-avatar{width:23px;height:23px;border-radius:50%;display:inline-grid;place-items:center;background:#11344E;color:white;font-size:8px;font-weight:800}
-.hero-img{height:200px;border-radius:9px;background-size:cover;background-position:center;position:relative;overflow:hidden}
+.hero-img{height:200px;border-radius:9px;background-color:#0A2238;background-size:cover;background-position:center;position:relative;overflow:hidden}
 .hero-img:after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(4,17,31,.05),rgba(4,17,31,.72))}
 .hero-film-title{position:absolute;z-index:2;left:22px;top:20px;color:white;font-family:Georgia,serif;letter-spacing:.22em;font-size:19px}
 .hero-film-sub{position:absolute;z-index:2;left:24px;top:47px;color:#D8E5EE;font-size:8px;letter-spacing:.11em}
@@ -244,12 +244,12 @@ def main() -> None:
 .kpi-icon{font-size:21px;width:34px;text-align:center;color:#083D5E}
 .kpi small{display:block;font-size:9px;color:#3F566A}
 .kpi b{display:block;font-size:19px;color:#102A43;margin-top:2px}
-.dash-card{background:#fff;border:1px solid #DCE5EC;border-radius:8px;padding:9px 10px;height:100%;box-sizing:border-box}
+.dash-card{background:#fff;border:1px solid #DCE5EC;border-radius:9px;padding:10px 11px;height:100%;box-sizing:border-box;box-shadow:0 1px 2px rgba(16,42,67,.025)}
 .section-title{font-size:13px;font-weight:800;color:#102A43;margin-bottom:7px}
 .screen-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:7px}
-.screen-head a{font-size:8px;color:#315C7D}
+.screen-head span{font-size:8px;color:#6A7E8E}
 .show-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}
-.show-mini{border:1px solid #DFE7ED;border-radius:7px;padding:9px;min-height:187px}
+.show-mini{border:1px solid #DFE7ED;border-radius:7px;padding:9px;min-height:187px;background:#FFF}
 .show-date{display:flex;justify-content:space-between;align-items:center;font-size:11px;color:#102A43;margin-bottom:5px}
 .show-date span{font-size:8px;color:#526477}
 .show-sold{font-size:23px;font-weight:800;color:#102A43;margin:9px 0 0}
@@ -261,7 +261,7 @@ def main() -> None:
 .mini-table th,.mini-table td,.rules-table th,.rules-table td{border:1px solid #DFE7ED;padding:4px 5px;text-align:left}
 .mini-table th,.rules-table th{background:#F5F8FA;color:#405B70;font-weight:700}
 .segmented{display:grid;grid-template-columns:1fr 1fr 1fr;border-radius:6px;overflow:hidden;background:#EAF3F7;margin-bottom:7px;font-size:8px;text-align:center}
-.segmented>*{padding:5px}.segmented b{background:#174D72;color:white}
+.segmented>*{padding:5px}.segmented b{background:#174D72;color:white}.segmented span{color:#315A73}
 .plan-row{display:grid;grid-template-columns:24px 1.35fr .95fr 1.45fr;gap:6px;align-items:center;border-bottom:1px solid #E8EDF1;padding:5px 2px;font-size:7.5px;color:#315069}
 .plan-row:last-child{border-bottom:0}
 .plan-row b{display:block;color:#163A55;font-size:8px}
@@ -308,7 +308,7 @@ def main() -> None:
     target_total = int(plan["target_today"].dropna().sum()) if plan["target_today"].notna().any() else None
     now = datetime.now(ZoneInfo("Europe/Berlin"))
 
-    st.markdown(
+    st.html(
         f"""
         <div class="topbar">
           <span class="top-chip">Resolution⌄</span>
@@ -323,22 +323,20 @@ def main() -> None:
           </div>
           <div class="venue-id"><span class="venue-logo">◒</span><span><b>ESO Supernova</b><br>Planetarium & Visitor Centre<br>Garching, Germany</span></div>
         </div>
-        """,
-        unsafe_allow_html=True,
+        """
     )
 
     hero_left, hero_right = st.columns([1.05, 2.45], gap="small")
     with hero_left:
-        st.markdown(
+        st.html(
             f"""<div class="hero-img" style="background-image:url('{RESOLUTION_IMAGE}')">
               <div class="hero-film-title">RESOLUTION</div>
-              <div class="hero-film-sub">A JOURNEY BEYOND</div>
+              <div class="hero-film-sub">A CINEPHONIC RHAPSODY FOR THE SOUL</div>
               <div class="hero-film-venue">ESO SUPERNOVA<br>PLANETARIUM & VISITOR CENTRE<br>GARCHING, GERMANY</div>
-            </div>""",
-            unsafe_allow_html=True,
+            </div>"""
         )
     with hero_right:
-        st.markdown(
+        st.html(
             f"""<div class="action-panel">
               <span class="reef-pill {status_class(decision["status"])}">{e(decision["status"])}</span>
               <h2>“What should we do today?”</h2>
@@ -349,8 +347,7 @@ def main() -> None:
                 <div><b>📍 &nbsp;Where:</b>{e(decision["area"])}</div>
                 <div><b>▣ &nbsp;Next check:</b>{e(decision["review"])}</div>
               </div>
-            </div>""",
-            unsafe_allow_html=True,
+            </div>"""
         )
 
     kpis = [
@@ -359,12 +356,11 @@ def main() -> None:
         ("↗","Healthy target today","Pre-launch" if target_total is None else str(target_total)),
         ("☷","Paid budget ceiling",f"€{int(cfg['marketing']['total_budget_eur'])}"),
     ]
-    st.markdown(
+    st.html(
         '<div class="kpi-grid">' + "".join(
             f'<div class="kpi"><div class="kpi-icon">{icon}</div><div><small>{label}</small><b>{value}</b></div></div>'
             for icon,label,value in kpis
-        ) + '</div>',
-        unsafe_allow_html=True,
+        ) + '</div>'
     )
 
     screen_col, curve_col = st.columns([1.23, 1], gap="small")
@@ -372,32 +368,32 @@ def main() -> None:
         cards = "".join(screening_card(row) for _, row in plan.iterrows())
         st.html(
             f'<div class="dash-card">'
-            f'<div class="screen-head"><div class="section-title">▣ &nbsp;Screening Control</div><a>View all screenings →</a></div>'
+            f'<div class="screen-head"><div class="section-title">▣ &nbsp;Screening Control</div><span>4 shows · 109 seats each</span></div>'
             f'<div class="show-grid">{cards}</div>'
             f'</div>'
         )
     with curve_col:
         with st.container(border=True):
-            st.markdown('<div class="section-title">↗ &nbsp;Healthy Booking Curve</div>', unsafe_allow_html=True)
+            st.html('<div class="section-title">↗ &nbsp;Healthy Booking Curve</div>')
             chart_col, mile_col = st.columns([1.65, .82], gap="small")
             with chart_col:
                 st.plotly_chart(curve_chart(cfg), width="stretch", config={"displayModeBar": False})
             with mile_col:
-                st.markdown('<div style="font-size:9px;font-weight:800;color:#173A54;margin-bottom:4px">Sales Milestones</div>' + milestones_html(cfg), unsafe_allow_html=True)
+                st.html('<div style="font-size:9px;font-weight:800;color:#173A54;margin-bottom:4px">Sales Milestones</div>' + milestones_html(cfg))
 
     plan_col, geo_col, budget_col = st.columns([1.48, 1.02, .86], gap="small")
     with plan_col:
-        st.markdown('<div class="dash-card">' + operating_plan_html() + '</div>', unsafe_allow_html=True)
+        st.html('<div class="dash-card">' + operating_plan_html() + '</div>')
     with geo_col:
-        st.markdown('<div class="dash-card">' + geography_html() + '</div>', unsafe_allow_html=True)
+        st.html('<div class="dash-card">' + geography_html() + '</div>')
     with budget_col:
-        st.markdown('<div class="dash-card">' + budget_html() + '</div>', unsafe_allow_html=True)
+        st.html('<div class="dash-card">' + budget_html() + '</div>')
 
     creative_col, rules_col = st.columns([1.05, 1.1], gap="small")
     with creative_col:
-        st.markdown('<div class="dash-card">' + creative_html() + '</div>', unsafe_allow_html=True)
+        st.html('<div class="dash-card">' + creative_html() + '</div>')
     with rules_col:
-        st.markdown('<div class="dash-card">' + rules_html() + '</div>', unsafe_allow_html=True)
+        st.html('<div class="dash-card">' + rules_html() + '</div>')
 
 
 if __name__ == "__main__":
