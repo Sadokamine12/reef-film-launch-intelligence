@@ -201,6 +201,30 @@ div[data-testid="stVerticalBlockBorderWrapper"] > div{padding:10px 11px!importan
   border-radius:7px;padding:10px 12px;color:#164A4D;font-size:11px;
 }
 .reef-cta strong{color:#0A5D62}
+.reef-card,.panel,.map-card{
+  background:#fff!important;
+  color:#102A43!important;
+  border:1px solid #DCE5EC!important;
+  border-radius:10px!important;
+  padding:14px!important;
+  box-shadow:none!important;
+  height:100%;
+  box-sizing:border-box;
+}
+.reef-card h3,.panel h3,.map-card h3{margin:3px 0 7px!important;font-size:13px!important}
+.reef-card p,.panel p,.map-card p{font-size:10px!important;color:#526477!important;margin:.3rem 0}
+.reef-hero,.hero,.hero-map{
+  background:linear-gradient(120deg,#102A42,#174D5C)!important;
+  border:0!important;
+  border-radius:12px!important;
+  color:white!important;
+  padding:18px 20px!important;
+  margin-bottom:10px!important;
+}
+.reef-hero h1,.hero h1,.hero-map h1{color:white!important;font-size:22px!important}
+.reef-hero p,.hero p,.hero-map p{color:#D6E7EE!important;font-size:10px!important;margin:3px 0 0}
+.badge{display:inline-block;background:#E6F4F2!important;color:#087E83!important;border:1px solid #BCE0DB!important;border-radius:999px;padding:3px 7px;font-size:8px}
+.small,.small-muted{font-size:9px!important;color:#6A7E8E!important}
 @media(max-width:900px){
   [data-testid="stSidebar"]{width:150px!important;min-width:150px!important}
   .block-container{padding:8px 10px 22px 10px!important}
