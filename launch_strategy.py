@@ -123,6 +123,8 @@ def _latest_sales_by_show(resolution: pd.DataFrame, cfg: dict) -> dict[str, dict
 
 
 def _status(sold: int, target: int) -> str:
+    if sold >= 95:
+        return "NEAR FULL"
     if target <= 0 or sold >= target:
         return "ON TRACK"
     ratio = sold / max(target, 1)
@@ -132,7 +134,7 @@ def _status(sold: int, target: int) -> str:
 
 
 def _daily_budget(status: str, days_to_show: int) -> int:
-    if status == "ON TRACK":
+    if status in {"ON TRACK", "NEAR FULL"}:
         return 0
     if status == "WATCH":
         return 8 if days_to_show > 14 else 12
@@ -224,6 +226,9 @@ def show_plan(cfg: dict, resolution: pd.DataFrame | None = None, as_of: date | N
         if as_of < paid_start and status != "ON TRACK":
             action = "Keep paid media off until the planned test window; improve organic distribution and verify tracking."
             channel = "Organic / owned / partner"
+        elif status == "NEAR FULL":
+            action = "Stop paid promotion for this screening and move the CTA to the next available Tuesday."
+            channel = "No paid spend for this screening"
         elif status == "ON TRACK":
             action = "No extra paid spend. Protect budget and keep monitoring daily sales pace."
             channel = "Organic + retargeting only if needed"
@@ -283,7 +288,7 @@ def today_decision(plan_df: pd.DataFrame, cfg: dict, as_of: date | None = None) 
             "review": "48 hours after the first valid booking snapshot",
         }
 
-    rank = {"ACTION": 0, "WATCH": 1, "ON TRACK": 2, "WAITING FOR DATA": 3, "PRE-LAUNCH": 4}
+    rank = {"ACTION": 0, "WATCH": 1, "ON TRACK": 2, "NEAR FULL": 3, "WAITING FOR DATA": 4, "PRE-LAUNCH": 5}
     active = plan_df[plan_df["days_to_show"] >= 0].copy()
     if active.empty:
         return {
@@ -305,6 +310,8 @@ def today_decision(plan_df: pd.DataFrame, cfg: dict, as_of: date | None = None) 
         headline = f"Recover the {show_label} screening: €{budget}/day for 3 days"
     elif row["status"] == "WATCH":
         headline = f"Correct the {show_label} screening: €{budget}/day for 3 days"
+    elif row["status"] == "NEAR FULL":
+        headline = f"{show_label} is nearly full — stop advertising it"
     else:
         headline = f"{show_label} is on track — spend €0 extra today"
 
