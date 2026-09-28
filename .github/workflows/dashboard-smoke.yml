@@ -1,0 +1,21 @@
+name: Dashboard smoke test
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Compile dashboard
+        run: python -m py_compile Executive_Forecast.py ui.py launch_strategy.py pages/1_Sales_Plan.py pages/2_Where_to_Advertise.py pages/3_Marketing_Plan.py
+      - name: Test launch strategy
+        run: python -m unittest tests.test_launch_strategy
