@@ -37,7 +37,7 @@ if not marketing.operational:
 with st.expander("Change scenario inputs"):
     budget = st.slider("Maximum campaign budget (EUR)", 0, 1000, int(cfg["budget_eur"]), 25)
     days_to_event = st.slider("Days before first screening when ads start", 7, 60, 28)
-    st.caption("Before lift evidence exists, at most EUR 240 goes to the planned learning tests. Any remainder stays unallocated.")
+    st.caption("Before lift evidence exists, at most EUR 100 goes to the controlled first test. Any remainder stays conditional.")
 
 sim, allocation = hybrid_simulation(budget, model=marketing, cfg=cfg, emp_stats=empirical, days_to_event=days_to_event, n=8000, market=market)
 baseline, _ = hybrid_simulation(0, model=marketing, cfg=cfg, emp_stats=empirical, days_to_event=days_to_event, n=8000, market=market)
@@ -59,7 +59,7 @@ tab_spend, tab_screenings, tab_next = st.tabs(["Spend and occupancy", "Four Tues
 
 with tab_spend:
     st.markdown("### What changes as the budget ceiling rises?")
-    st.caption("The curve flattens after EUR 240 because the conditional reserve is held until results justify its release.")
+    st.caption("The curve flattens after EUR 100 before controlled lift evidence exists, because the remaining budget stays conditional.")
     fig = go.Figure()
     fig.add_trace(go.Scatter(x=forecast["budget_eur"], y=forecast["high_tickets"], line=dict(width=0), showlegend=False, hoverinfo="skip"))
     fig.add_trace(go.Scatter(x=forecast["budget_eur"], y=forecast["low_tickets"], fill="tonexty", fillcolor="rgba(8,126,131,.13)", line=dict(width=0), name="Low to high"))
@@ -109,7 +109,7 @@ with tab_next:
     if marketing.operational:
         st.dataframe(next_increment_scenarios(allocation, model=marketing, days_to_event=days_to_event).head(8), hide_index=True, width="stretch")
     else:
-        st.info("There is no measured marginal ticket return yet. Run the balanced EUR 90 geography × creative test first. Move the reserve only after results and attribution are reviewed.")
+        st.info("There is no measured marginal ticket return yet. Run the EUR 100 controlled test first (€70 Meta + €30 Google). Move the reserve only after results and attribution are reviewed.")
         from experiment_protocol import build_experiment_plan
         plan = build_experiment_plan(market)
         first = plan[plan["wave"].eq("Geo + creative")][["area", "creative", "age_band", "planned_spend_eur"]]
