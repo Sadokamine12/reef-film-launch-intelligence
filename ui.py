@@ -26,7 +26,7 @@ def render_sidebar() -> None:
         st.markdown(
             """
             <div class="reef-side-brand">
-              <div class="reef-side-mark">⌁</div>
+              <div class="reef-side-mark">≋</div>
               <div><b>REEF</b> <span>Distribution</span></div>
             </div>
             """,
@@ -117,8 +117,8 @@ header[data-testid="stHeader"]{display:none!important}
 [data-testid="stSidebar"]{
   background:#08263F!important;
   border-right:0!important;
-  width:176px!important;
-  min-width:176px!important;
+  width:190px!important;
+  min-width:190px!important;
 }
 [data-testid="stSidebarContent"]{padding:0!important}
 [data-testid="stSidebarNav"]{display:none!important}
@@ -167,7 +167,7 @@ header[data-testid="stHeader"]{display:none!important}
   color:white;font-size:17px;letter-spacing:-.02em;
 }
 .reef-side-brand span{font-weight:400;color:#D7E1EA;font-size:13px}
-.reef-side-mark{font-size:25px;line-height:1;color:#EAF7FA;transform:rotate(-20deg)}
+.reef-side-mark{font-size:27px;line-height:1;color:#EAF7FA;letter-spacing:-.08em}
 .reef-side-photo{
   min-height:380px;
   height:calc(100vh - 410px);
