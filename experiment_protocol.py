@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import timedelta
+from datetime import date
 from pathlib import Path
 import pandas as pd
 
@@ -9,59 +9,121 @@ from project_config import load_config
 
 
 def build_experiment_plan(market: dict | None = None) -> pd.DataFrame:
-    """Build the complete EUR 240 learning plan for the selected target market."""
+    """Build the controlled EUR 100 first paid test for the selected market."""
     market = market or get_market()
-    zones = [str(z["area"]) for z in market.get("zones", [])][:3]
-    if len(zones) < 3:
-        zones = (zones + [market.get("label", "Selected city")] * 3)[:3]
+    zones = [str(z["area"]) for z in market.get("zones", [])][:2]
+    if len(zones) < 2:
+        zones = (zones + [market.get("label", "Selected city")] * 2)[:2]
     city = str(market.get("label", "Selected city"))
     search_area = str(market.get("search_area", city))
+
     rows = [{
-        "step": "W0", "wave": "Baseline", "dependency": "Tickets live", "channel": "No paid media",
-        "city": city, "area": "All", "age_band": "20-60", "creative": "None", "planned_spend_eur": 0,
-        "duration_days": 2, "purpose": "Measure pre-campaign Resolution sales velocity", "control_group": "yes",
+        "step": "W0",
+        "wave": "Baseline",
+        "dependency": "Tickets live",
+        "channel": "No paid media",
+        "city": city,
+        "area": "All",
+        "age_band": "20-60",
+        "creative": "None",
+        "planned_spend_eur": 0.0,
+        "duration_days": 2,
+        "purpose": "Measure no-paid Resolution sales velocity",
+        "control_group": "yes",
     }]
+
+    # EUR 70 Meta: two local zones x two controlled creative angles.
     for area in zones:
-        for creative in ["SXSW proof", "Music + 360 experience"]:
+        for creative in ["Experience", "Event"]:
             rows.append({
-                "step": f"W1-{len(rows):02d}", "wave": "Geo + creative", "dependency": "After baseline window",
-                "channel": "Meta", "city": city, "area": area, "age_band": "20-60", "creative": creative,
-                "planned_spend_eur": 15, "duration_days": 3, "purpose": "Learn geography and creative engagement",
+                "step": f"W1-{len(rows):02d}",
+                "wave": "Geo + creative",
+                "dependency": "After organic baseline",
+                "channel": "Meta",
+                "city": city,
+                "area": area,
+                "age_band": "20-60",
+                "creative": creative,
+                "planned_spend_eur": 17.5,
+                "duration_days": 7,
+                "purpose": "Compare local geography and creative response",
                 "control_group": "no",
             })
-    for area in ["WINNER_GEO_1", "WINNER_GEO_2"]:
-        for age in ["20-34", "35-60"]:
-            rows.append({
-                "step": f"W2-{len(rows):02d}", "wave": "Age refinement",
-                "dependency": "Use top 2 W1 geos + winning creative", "channel": "Meta", "city": city,
-                "area": area, "age_band": age, "creative": "WINNER_CREATIVE", "planned_spend_eur": 20,
-                "duration_days": 3, "purpose": "Learn age response without fragmenting Wave 1", "control_group": "no",
-            })
+
+    # EUR 30 Google Search: capture high-intent local demand in the same test window.
     rows.append({
-        "step": "W3-SEARCH", "wave": "Intent", "dependency": "Ticket landing page live", "channel": "Google Search",
-        "city": city, "area": search_area, "age_band": "20-60", "creative": "High-intent text",
-        "planned_spend_eur": 40, "duration_days": 4, "purpose": "Compare high-intent search against Meta",
+        "step": "W1-SEARCH",
+        "wave": "Intent",
+        "dependency": "Ticket landing page live",
+        "channel": "Google Search",
+        "city": city,
+        "area": search_area,
+        "age_band": "20-60",
+        "creative": "Event / high-intent text",
+        "planned_spend_eur": 30.0,
+        "duration_days": 7,
+        "purpose": "Measure high-intent search response",
         "control_group": "no",
     })
-    rows.append({
-        "step": "W3-RET", "wave": "Retargeting", "dependency": "Only if retargeting pool is large enough",
-        "channel": "Retargeting", "city": city, "area": "Prior site/video visitors", "age_band": "20-60",
-        "creative": "Scarcity / next Tuesday", "planned_spend_eur": 30, "duration_days": 4,
-        "purpose": "Measure warm-audience efficiency", "control_group": "no",
-    })
+
     return pd.DataFrame(rows)
 
 
 def campaign_timeline() -> pd.DataFrame:
+    """Business-first calendar matching the management command center."""
     cfg = load_config()
+    launch = cfg.get("launch_plan", {})
     first_show = pd.to_datetime(cfg["screenings"]["dates"][0]).date()
+    sales_open = pd.to_datetime(launch.get("sales_open_target", "2026-11-16")).date()
+    paid_start = pd.to_datetime(launch.get("paid_test_start", "2027-01-04")).date()
+    paid_end = pd.to_datetime(launch.get("paid_test_end", "2027-01-10")).date()
+
     rows = [
-        ("P0", first_show - timedelta(days=120), first_show - timedelta(days=31), "Pre-launch learning", 0, "Collect comparable ESO sales daily/regularly; prepare creatives, UTMs and booking-page discovery.", "ESO snapshots"),
-        ("P1", first_show - timedelta(days=30), first_show - timedelta(days=29), "Resolution no-paid baseline", 0, "Once tickets are live, keep paid media off for ~48h and record Resolution seat movement.", "Daily seat delta"),
-        ("P2", first_show - timedelta(days=28), first_show - timedelta(days=25), "Wave 1 — geo + creative", 90, "Selected city: 3 geos × 2 creatives; broad 20–60 target; keep ad sets separate.", "CTR, LPV, verified tickets if available"),
-        ("P3", first_show - timedelta(days=24), first_show - timedelta(days=21), "Wave 2 — age refinement", 80, "Top 2 Wave-1 geos × 2 age bands using the winning creative.", "CTR, LPV, ticket CPA"),
-        ("P4", first_show - timedelta(days=20), first_show - timedelta(days=17), "Search + retarget validation", 70, "€40 Search + €30 retargeting only if audience pool is large enough.", "Intent CPA / conversion"),
-        ("P5", first_show - timedelta(days=16), first_show + timedelta(days=21), "Scale reserve across 4 Tuesdays", 260, "Move budget only to cells with measured evidence; reallocate after every Tuesday.", "Incremental ticket lift / CPA"),
+        (
+            "P0",
+            date.today(),
+            sales_open,
+            "Launch readiness",
+            0,
+            "Confirm booking links, UTMs, event listings and the two approved creative angles.",
+            "Readiness",
+        ),
+        (
+            "P1",
+            sales_open,
+            paid_start - pd.Timedelta(days=1),
+            "Organic booking baseline",
+            0,
+            "Keep paid media off and learn the natural Resolution booking pace.",
+            "Tickets/day by screening",
+        ),
+        (
+            "P2",
+            paid_start,
+            paid_end,
+            "Controlled paid test",
+            100,
+            "Run EUR 70 Meta + EUR 30 Google; compare response without committing the remaining budget.",
+            "Sales pace, CTR, LPV, verified purchases if available",
+        ),
+        (
+            "P3",
+            paid_end + pd.Timedelta(days=1),
+            first_show - pd.Timedelta(days=2),
+            "Conditional scaling",
+            0,
+            "Release budget only for screenings below the healthy curve and only into evidence-supported channels/areas.",
+            "Gap to target / marginal CPA",
+        ),
+        (
+            "P4",
+            first_show - pd.Timedelta(days=1),
+            pd.to_datetime(cfg["screenings"]["dates"][-1]).date(),
+            "Show-specific recovery",
+            0,
+            "Use EUR 8-25/day only on the Tuesday that needs help; stop promotion when a show is near full.",
+            "Per-screening pace",
+        ),
     ]
     return pd.DataFrame(rows, columns=["phase", "start_date", "end_date", "name", "budget_eur", "action", "primary_measure"])
 
