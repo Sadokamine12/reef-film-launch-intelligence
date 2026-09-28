@@ -45,17 +45,18 @@ def screening_card(row: pd.Series) -> str:
     action = str(row["recommended_action"])
     if row["status"] == "PRE-LAUNCH":
         action = "Prepare booking launch, tracking and creative"
-    return f"""
-      <div class="show-mini">
-        <div class="show-date"><b>{date_label}</b><span>Tue</span></div>
-        <span class="reef-pill {status_class(str(row["status"]))}">{e(row["status"])}</span>
-        <div class="show-sold">{sold}</div>
-        <div class="show-main">{"Tickets not on sale yet" if sold == "—" else "tickets sold"}</div>
-        <div class="show-muted">{e(forecast)}</div>
-        <div class="show-action"><b>Action:</b> {e(action)}</div>
-        <div class="show-trigger"><b>Paid trigger:</b> €{trigger}/day</div>
-      </div>
-    """
+    ticket_label = "Tickets not on sale yet" if sold == "—" else "tickets sold"
+    return (
+        f'<div class="show-mini">'
+        f'<div class="show-date"><b>{date_label}</b><span>Tue</span></div>'
+        f'<span class="reef-pill {status_class(str(row["status"]))}">{e(row["status"])}</span>'
+        f'<div class="show-sold">{sold}</div>'
+        f'<div class="show-main">{ticket_label}</div>'
+        f'<div class="show-muted">{e(forecast)}</div>'
+        f'<div class="show-action"><b>Action:</b> {e(action)}</div>'
+        f'<div class="show-trigger"><b>Paid trigger:</b> €{trigger}/day</div>'
+        f'</div>'
+    )
 
 
 def curve_chart(cfg: dict) -> go.Figure:
@@ -369,12 +370,11 @@ def main() -> None:
     screen_col, curve_col = st.columns([1.23, 1], gap="small")
     with screen_col:
         cards = "".join(screening_card(row) for _, row in plan.iterrows())
-        st.markdown(
-            f"""<div class="dash-card">
-              <div class="screen-head"><div class="section-title">▣ &nbsp;Screening Control</div><a>View all screenings →</a></div>
-              <div class="show-grid">{cards}</div>
-            </div>""",
-            unsafe_allow_html=True,
+        st.html(
+            f'<div class="dash-card">'
+            f'<div class="screen-head"><div class="section-title">▣ &nbsp;Screening Control</div><a>View all screenings →</a></div>'
+            f'<div class="show-grid">{cards}</div>'
+            f'</div>'
         )
     with curve_col:
         with st.container(border=True):
