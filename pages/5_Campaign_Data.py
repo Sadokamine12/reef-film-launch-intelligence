@@ -25,7 +25,7 @@ for col, label, value in zip(cols,
     col.metric(label, value)
 
 if summary["rows"] == 0:
-    st.info("No campaign results have been imported. The dashboard shows planning assumptions until real ad results arrive. Start with the EUR 90 first wave after the no-paid booking window.")
+    st.info("No campaign results have been imported. The dashboard shows planning assumptions until real ad results arrive. Start with the EUR 100 controlled test (€70 Meta + €30 Google) after the no-paid booking window.")
 else:
     st.caption(f"{summary['verified_ticket_rows']} tracked-ticket rows. Tracked purchases alone do not prove additional ticket lift.")
 
@@ -111,7 +111,7 @@ with st.expander("Add one observation manually"):
         area_options = [z["area"] for z in market.get("zones", [])] + [market.get("search_area", city), "Prior site/video visitors", "All"]
         area = b[0].selectbox("Area", list(dict.fromkeys(area_options)))
         age = b[1].selectbox("Adults", ["20-60", "20-34", "35-60"])
-        creative = b[2].selectbox("Creative", ["SXSW proof", "Music + 360 experience", "High-intent text", "Scarcity / next Tuesday", "None"])
+        creative = b[2].selectbox("Creative", ["Experience", "Event", "Event / high-intent text", "Scarcity / next Tuesday", "None"])
         test_id = b[3].text_input("Test ID", placeholder="W1-01")
         st.caption(f"Selected market city: {city}")
         c = st.columns(5)
