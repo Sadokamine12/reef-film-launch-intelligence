@@ -1,0 +1,34 @@
+# Render Blueprint: API plus standard PostgreSQL. Review service pricing before applying.
+services:
+  - type: web
+    name: reef-launch-api
+    runtime: docker
+    dockerfilePath: ./apps/api/Dockerfile
+    dockerContext: .
+    plan: starter
+    region: frankfurt
+    healthCheckPath: /health/ready
+    envVars:
+      - key: ENVIRONMENT
+        value: production
+      - key: DEV_AUTH_BYPASS
+        value: "false"
+      - key: DATABASE_URL
+        fromDatabase:
+          name: reef-launch-db
+          property: connectionString
+      - key: CORS_ORIGINS
+        sync: false
+      - key: REEF_ADMIN_EMAIL
+        sync: false
+      - key: REEF_ADMIN_PASSWORD
+        sync: false
+      - key: DB_POOL_SIZE
+        value: "5"
+databases:
+  - name: reef-launch-db
+    databaseName: reef_launch
+    user: reef_app
+    region: frankfurt
+    plan: basic-256mb
+    ipAllowList: []

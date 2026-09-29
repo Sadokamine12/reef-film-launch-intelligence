@@ -1,0 +1,19 @@
+export type SourceLabel = 'LIVE'|'OBSERVED'|'ESTIMATED'|'PLANNING ASSUMPTION';
+export type Status = 'PRE_LAUNCH'|'DATA_NEEDED'|'ON_TRACK'|'WATCH'|'ACTION'|'NEAR_FULL'|'COMPLETE';
+export interface Decision {status:Status;target_today:number;target_sales_today:number;recommended_budget_cents:number;daily_budget_cents:number;duration_days:number;channel:string;geography:string;creative:string;next_review:string;action:string;reason:string}
+export interface Forecast {low:number|null;base:number|null;high:number|null;confidence:string;confidence_note:string;source_label:SourceLabel;required_sales_pace:number|null;gap_to_target:number|null;method:string}
+export interface CurvePoint {days:number;tickets:number}
+export interface Screening {id:string;date:string;time:string|null;capacity:number;booking_url:string|null;sales_open_date:string|null;sales_open_confirmed:boolean;days_until:number;tickets_sold:number|null;seats_remaining:number|null;observed_at:string|null;source_label:SourceLabel;stale:boolean;velocity_3:number|null;velocity_7:number|null;acceleration:number|null;forecast:Forecast;decision:Decision;actual_curve:(CurvePoint&{observed_at:string})[]}
+export interface Rules {curve:CurvePoint[];total_ceiling_cents:number;meta_ceiling_cents:number;google_ceiling_cents:number;reserve_cents:number;meta_test_cents:number;google_test_cents:number;watch_ratio:number;near_full_tickets:number;watch_daily_cents:number;action_daily_cents:number;campaign_days:number;stale_after_hours:number;paid_window_days:number;sales_open_target:string;paid_test_start:string;paid_test_end:string}
+export interface BudgetChannel {ceiling_cents:number;spent_cents:number;committed_cents:number;available_cents:number;over_ceiling:boolean}
+export interface Budget {ceiling_cents:number;spent_cents:number;committed_cents:number;available_cents:number;reserve_cents:number;remaining_cents:number;over_ceiling:boolean;channels:Record<'META'|'GOOGLE',BudgetChannel>}
+export interface Project {id:string;name:string;film:string;venue:string;latitude:number;longitude:number;timezone:string}
+export interface Dashboard {as_of:string;project:Project;summary:{capacity:number;tickets_sold:number|null;known_tickets:number;observed_screenings:number;seats_remaining:number|null;target_today:number;recommended_budget_cents:number};today:Decision&{headline:string;screening_id:string};screenings:Screening[];budget:Budget;curve:CurvePoint[];rules:Rules;revision:number}
+export interface Performance {spend_cents:number;impressions:number;clicks:number;landing_page_views:number|null;attributed_tickets:number|null;ctr:number|null;landing_page_response:number|null;cost_per_ticket_cents:number|null;observations:number;source_label?:SourceLabel;last_imported_at?:string|null}
+export interface Campaign {id:string;name:string;platform:'META'|'GOOGLE';ad_set:string;geography_id:string;audience:string;creative_id:string;screening_id:string;start_date:string;end_date:string;budget_cents:number;status:string;external_id:string|null;metrics:Performance}
+export interface Creative {id:string;name:string;concept:string;headline:string;body:string;asset_url:string|null;status:'DRAFT'|'READY'|'RETIRED';performance:Performance}
+export interface Geography {id:string;name:string;min_km:number;max_km:number;priority:string;notes:string;performance:Performance}
+export interface Report {kind:string;title:string;generated_at:string;project:Project;rows:Record<string,string|number|null>[];notes:string[];recommendation:string}
+export interface Historical {id:string;programme:string;show_date:string;observed_at:string;days_before:number;unavailable_seats:number;capacity:number;source_url:string}
+export interface Integration {provider:string;status:string;label:SourceLabel;last_sync:string|null;detail:string}
+export interface User {email:string;role:'viewer'|'editor';development:boolean}

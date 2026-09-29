@@ -1,0 +1,26 @@
+{
+  "name": "reef-launch-intelligence",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "apps/web",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev -w @reef/web",
+    "build": "npm run build -w @reef/web",
+    "typecheck": "npm run typecheck -w @reef/web",
+    "test": "npm run test -w @reef/web",
+    "test:e2e": "playwright test",
+    "db:local": "node scripts/local-postgres.mjs"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "0.5.8",
+    "@electric-sql/pglite-socket": "^0.2.11",
+    "@playwright/test": "^1.55.0",
+    "@sparticuz/chromium": "^153.0.0"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

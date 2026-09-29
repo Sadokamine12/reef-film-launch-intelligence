@@ -1,0 +1,11 @@
+import {PGlite} from '@electric-sql/pglite';
+import {PGLiteSocketServer} from '@electric-sql/pglite-socket';
+import {spawn} from 'node:child_process';
+const db=await PGlite.create();
+const server=new PGLiteSocketServer({db,host:'127.0.0.1',port:55432});
+await server.start();
+const [command,...args]=process.argv.slice(2);
+if(!command) throw new Error('Pass a command to run against a temporary PostgreSQL development database');
+const child=spawn(command,args,{stdio:'inherit',env:{...process.env,ENVIRONMENT:'test',DEV_AUTH_BYPASS:'true',DB_POOL_SIZE:'1',DATABASE_URL:'postgresql+psycopg://postgres:postgres@127.0.0.1:55432/postgres'}});
+const code=await new Promise(resolve=>child.on('exit',resolve));
+await server.stop(); await db.close(); process.exit(code??1);
