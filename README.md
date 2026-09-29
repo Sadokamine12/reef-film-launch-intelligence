@@ -39,13 +39,14 @@ Open **http://localhost:3000**. Stop with Ctrl+C.
 
 1. Dashboard: inspect the initial planning state and the “WHAT SHOULD WE DO TODAY?” section.
 2. Ticket Sales: record a cumulative ESO ticket count. No sales are invented in the seed data. Three-/seven-day pace needs observations covering that full period.
-3. Settings: enter official booking links and confirmed times/opening dates. A future confirmed opening still stays in pre-launch until that date.
-4. Campaigns: create a draft, linked to a screening, creative and geography. Drafts do not reserve budget. Imported dates must be within its start/end dates.
-5. Download the CSV template. Add `date,spend_eur,impressions,clicks,landing_page_views,attributed_tickets` rows. Preview before saving. Blank ticket attribution stays unknown; Google “Conversions” is not automatically ticket sales.
-6. Creatives and Geography: inspect the metrics after importing campaign results.
-7. Reports: choose a report, export CSV, or use Print / Save PDF.
+3. Forecast & Scenarios: test ticket price, any analytical advertising budget, attendance target and optional REEF economics. Price elasticity and ad response are always labeled as assumptions unless evidence exists.
+4. Settings: enter official booking links and confirmed times/opening dates. A future confirmed opening still stays in pre-launch until that date.
+5. Campaigns: create a draft, linked to a screening, creative and geography. Drafts do not reserve budget. Imported dates must be within its start/end dates.
+6. Download the CSV template. Add `date,spend_eur,impressions,clicks,landing_page_views,attributed_tickets` rows. Preview before saving. Blank ticket attribution stays unknown; Google “Conversions” is not automatically ticket sales.
+7. Creatives and Geography: inspect the metrics after importing campaign results.
+8. Reports: choose a report, export CSV, or use Print / Save PDF.
 
-The calendar and rules are real: before the paid window, the app will recommend preparation/organic promotion and €0 spend. It does not manufacture an urgent campaign for demonstration. The four screenings are 2, 9, 16 and 23 February 2027, each with 109 seats. Times are not yet confirmed.
+The calendar and rules are real: before the paid window, the app will recommend preparation/organic promotion and €0 spend. It does not manufacture an urgent campaign for demonstration. The six screenings are 2, 5, 6, 9, 16 and 23 February 2027, each currently modeled at 109 seats (654 provisional seats total). Times are not yet confirmed.
 
 ## Stack and layout
 
@@ -78,6 +79,6 @@ For an Internet deployment set `ENVIRONMENT=production`, disable `DEV_AUTH_BYPAS
 
 ## Verification and limits
 
-See `docs/LOCAL_HANDOFF.md` for the latest verification results and remaining work. Forecasts use a replaceable heuristic booking-curve engine; ranges are not validated prediction intervals. Archived unavailable inventory may contain held seats. Attributed tickets are not proven incremental lift.
+See `docs/LOCAL_HANDOFF.md` for the latest verification results and remaining work. Baseline forecasts use a transparent small-data ridge model with grouped leave-one-event-out validation and bootstrap planning ranges. Archived unavailable inventory is a demand proxy, not verified final attendance. Price elasticity and advertising response remain explicit planning assumptions unless future evidence supports empirical estimates; attributed tickets are not proven incremental lift.
 
 The original repository was only read for historical data and was not modified. This ZIP is the new application's source, without dependencies, runtime databases, credentials or Git history.

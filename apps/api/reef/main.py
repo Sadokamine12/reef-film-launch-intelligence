@@ -15,6 +15,7 @@ from reef.auth import COOKIE, User, current_user, editor, token_hash, verify_pas
 from reef.campaigns.service import budget, metrics_for
 from reef.config import settings
 from reef.db import session
+from reef.forecasting.scenarios import scenario_analysis
 from reef.integrations.adapters import parse_campaign_csv
 from reef.models import (
     AuditEvent,
@@ -37,6 +38,7 @@ from reef.schemas import (
     CreativeInput,
     Rules,
     RuleUpdate,
+    ScenarioInput,
     ScreeningUpdate,
     SnapshotInput,
 )
@@ -190,6 +192,18 @@ def me(user: User = Depends(current_user)):
 @app.get("/v1/dashboard")
 def get_dashboard(db: Session = Depends(session), user: User = Depends(current_user)):
     return dashboard(db, project(db))
+
+
+@app.post("/v1/scenarios")
+def scenarios(payload: ScenarioInput, db: Session = Depends(session), user: User = Depends(current_user)):
+    p = project(db)
+    rules = Rules.model_validate(p.rules)
+    try:
+        return scenario_analysis(dashboard(db, p), payload, rules)
+    except KeyError as exc:
+        raise HTTPException(404, f"Unknown screening: {exc.args[0]}") from exc
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from exc
 
 
 @app.get("/v1/history")

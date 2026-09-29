@@ -250,3 +250,84 @@ def test_global_recommendations_respect_remaining_budget(db):
     data = dashboard(db, p, now)
     assert sum(s["decision"]["recommended_budget_cents"] for s in data["screenings"]) <= 5000
     assert data["budget"]["reserve_cents"] == 7500
+
+
+def test_scenario_default_uses_six_screenings_and_explicit_evidence(client):
+    r = client.post("/v1/scenarios", json={})
+    assert r.status_code == 200, r.text
+    data = r.json()
+    assert len(data["screenings"]) == 6
+    assert data["portfolio"]["capacity"] == 654
+    assert 0 <= data["portfolio"]["tickets_low"] <= data["portfolio"]["tickets_base"]
+    assert data["portfolio"]["tickets_base"] <= data["portfolio"]["tickets_high"] <= 654
+    assert data["ticket_price_cents"] == 650
+    assert data["evidence"]["price_response"]["classification"] == "PLANNING ASSUMPTION"
+    assert data["evidence"]["advertising_response"]["classification"] == "UNKNOWN"
+    assert data["portfolio"]["provisional_contribution_cents"] is None
+
+
+def test_scenario_negative_elasticity_reduces_demand_as_price_rises(client):
+    baseline = client.post("/v1/scenarios", json={"ticket_price_cents": 650}).json()
+    higher = client.post("/v1/scenarios", json={"ticket_price_cents": 1200}).json()
+    assert higher["portfolio"]["tickets_base"] <= baseline["portfolio"]["tickets_base"]
+    assert baseline["price_ladder"][0]["ticket_price_cents"] == 650
+    assert any(row["ticket_price_cents"] == 1200 for row in higher["price_ladder"])
+
+
+def test_scenario_break_even_math_uses_capacity_and_cents(client):
+    data = client.post(
+        "/v1/scenarios",
+        json={"screening_ids": ["resolution-2027-02-02"], "ticket_price_cents": 800},
+    ).json()
+    assert data["screenings"][0]["break_even_tickets_vs_baseline_full"] == 89
+    assert 109 * 650 == 70850
+
+
+def test_ad_budget_needs_explicit_response_assumption(client):
+    baseline = client.post("/v1/scenarios", json={"advertising_budget_cents": 0}).json()
+    no_response = client.post("/v1/scenarios", json={"advertising_budget_cents": 100000}).json()
+    assert no_response["portfolio"]["tickets_base"] == baseline["portfolio"]["tickets_base"]
+    assert no_response["portfolio"]["advertising_budget_cents"] == 100000
+    assert no_response["evidence"]["advertising_response"]["classification"] == "UNKNOWN"
+    assert any("cannot yet be empirically estimated" in warning for warning in no_response["warnings"])
+
+
+def test_planning_cpa_can_model_capacity_limited_ad_uplift(client):
+    baseline = client.post("/v1/scenarios", json={}).json()
+    scenario = client.post(
+        "/v1/scenarios",
+        json={"advertising_budget_cents": 50000, "ad_incremental_cpa_cents": 2500},
+    ).json()
+    assert scenario["portfolio"]["tickets_base"] >= baseline["portfolio"]["tickets_base"]
+    assert scenario["portfolio"]["tickets_base"] <= scenario["portfolio"]["capacity"]
+    assert scenario["evidence"]["advertising_response"]["classification"] == "PLANNING ASSUMPTION"
+
+
+def test_provisional_reef_contribution_requires_complete_economics(client):
+    unknown = client.post("/v1/scenarios", json={}).json()
+    assert unknown["portfolio"]["reef_ticket_income_cents"] is None
+    assert unknown["portfolio"]["provisional_contribution_cents"] is None
+
+    payload = {
+        "ticket_price_cents": 1000,
+        "advertising_budget_cents": 10000,
+        "revenue_share_bps": 5000,
+        "fixed_cost_cents": 20000,
+        "variable_cost_per_ticket_cents": 100,
+    }
+    known = client.post("/v1/scenarios", json=payload).json()
+    portfolio = known["portfolio"]
+    assert portfolio["economics_complete"] is True
+    expected_income = round(portfolio["gross_revenue_base_cents"] * 0.5)
+    assert portfolio["reef_ticket_income_cents"] == expected_income
+    assert portfolio["provisional_contribution_cents"] == (
+        expected_income
+        - payload["advertising_budget_cents"]
+        - payload["fixed_cost_cents"]
+        - portfolio["tickets_base"] * payload["variable_cost_per_ticket_cents"]
+    )
+
+
+def test_scenario_rejects_unknown_screening(client):
+    r = client.post("/v1/scenarios", json={"screening_ids": ["missing"]})
+    assert r.status_code == 404

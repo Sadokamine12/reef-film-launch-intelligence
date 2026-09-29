@@ -31,6 +31,17 @@ class Rules(StrictModel):
     campaign_days: int = Field(default=3, ge=1, le=7)
     stale_after_hours: int = Field(default=48, ge=1, le=168)
     paid_window_days: int = Field(default=30, ge=1, le=60)
+    # Launch economics and scenario defaults. Monetary values are integer cents;
+    # revenue share is basis points (10,000 = 100%). Unknown economics remain nullable.
+    baseline_ticket_price_cents: int = Field(default=650, ge=1, le=100000)
+    attendance_target_pct: float = Field(default=80.0, ge=0, le=100)
+    price_elasticity: float = Field(default=-1.0, ge=-5.0, le=-0.01)
+    price_elasticity_uncertainty: float = Field(default=0.6, ge=0, le=3.0)
+    revenue_share_bps: int | None = Field(default=None, ge=0, le=10000)
+    fixed_cost_cents: int | None = Field(default=None, ge=0, le=100000000)
+    variable_cost_per_ticket_cents: int | None = Field(default=None, ge=0, le=1000000)
+    ad_incremental_cpa_cents: int | None = Field(default=None, ge=1, le=10000000)
+    cannibalization_pct: float | None = Field(default=None, ge=0, le=100)
     sales_open_target: date = date(2026, 11, 16)
     paid_test_start: date = date(2027, 1, 4)
     paid_test_end: date = date(2027, 1, 10)
@@ -60,6 +71,28 @@ class Rules(StrictModel):
 class RuleUpdate(StrictModel):
     revision: int = Field(ge=1)
     rules: Rules
+
+
+class ScenarioInput(StrictModel):
+    screening_ids: list[str] | None = None
+    ticket_price_cents: int | None = Field(default=None, ge=1, le=100000)
+    advertising_budget_cents: int = Field(default=0, ge=0, le=100000000)
+    attendance_target_pct: float | None = Field(default=None, ge=0, le=100)
+    revenue_share_bps: int | None = Field(default=None, ge=0, le=10000)
+    fixed_cost_cents: int | None = Field(default=None, ge=0, le=100000000)
+    variable_cost_per_ticket_cents: int | None = Field(default=None, ge=0, le=1000000)
+    price_elasticity: float | None = Field(default=None, ge=-5.0, le=-0.01)
+    ad_incremental_cpa_cents: int | None = Field(default=None, ge=1, le=10000000)
+    cannibalization_pct: float | None = Field(default=None, ge=0, le=100)
+
+    @field_validator("screening_ids")
+    @classmethod
+    def unique_screenings(cls, value):
+        if value is not None and not value:
+            raise ValueError("Select at least one screening")
+        if value is not None and len(value) != len(set(value)):
+            raise ValueError("Screening selection contains duplicates")
+        return value
 
 
 class SnapshotInput(StrictModel):

@@ -16,7 +16,7 @@ Browser verification used an extracted Chromium binary because Playwright's brow
 
 ## Included workflows
 
-All eight navigation areas, Resolution with four February 2027 screenings, booking curves, replaceable forecasts, configurable decision/budget rules, sales entry, historical ESO inventory, campaign drafts/status and CSV preview/import, creatives, geographic radii and zone metrics, management reports with CSV/print export, settings and audit records. Session authentication exists for the standard PostgreSQL deployment path; quick local testing explicitly bypasses login on loopback only.
+The workspace includes Resolution with six February 2027 screenings, booking curves, grouped historical baseline forecasts, a Forecast & Scenarios decision lab, configurable decision/budget/economics rules, sales entry, historical ESO inventory, campaign drafts/status and CSV preview/import, creatives, geographic radii and zone metrics, management reports with CSV/print export, settings and audit records. Session authentication exists for the standard PostgreSQL deployment path; quick local testing explicitly bypasses login on loopback only.
 
 ## Remaining work and external connections
 
@@ -24,7 +24,8 @@ All eight navigation areas, Resolution with four February 2027 screenings, booki
 - No public deployment or hosted production database has been provisioned. Deployment configuration is preparation only; hosting credentials, service selection, and production validation remain necessary.
 - ESO ticket inventory, Meta Ads, Google Ads and website analytics are adapter interfaces, not live API connections. Manual observation and CSV imports work.
 - Confirm screening times, official ticket URLs, ticket opening dates, business assumptions and the venue location before operational use.
-- Forecasts use a heuristic; accuracy and uncertainty ranges need validation against observed outcomes.
+- Baseline demand now uses a transparent ridge model over archived ESO inventory with event-grouped validation. Final attendance remains an extrapolation and the uncertainty range is a planning range, not a calibrated prediction interval.
+- Price elasticity, incremental advertising response and cross-screening cannibalization are not identified by the current evidence. The scenario engine labels them as planning assumptions/user inputs rather than measured effects.
 - OSM map tiles require internet. They were unavailable during screenshot capture; the UI displays this explicitly while preserving the zone overlays.
 - Reports export CSV and support browser Print / Save PDF. Dedicated formatted Excel/PDF generation is future work.
 - Review authentication, backups, monitoring, accessibility and production database migrations in the actual hosting environment before exposing the service.

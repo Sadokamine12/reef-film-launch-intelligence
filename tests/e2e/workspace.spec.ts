@@ -1,5 +1,5 @@
 import {test,expect} from '@playwright/test';
-const routes=[['Ticket Sales','/ticket-sales','Every screening has its own curve'],['Marketing','/marketing','Put the money where it is needed'],['Geography','/geography','Start close. Expand with evidence.'],['Campaigns','/campaigns','Plan, measure, then decide'],['Creatives','/creatives','Two ideas. One ticket decision.'],['Reports','/reports','The numbers. The decision. The next step.'],['Settings','/settings','A clear source of truth']] as const;
+const routes=[['Ticket Sales','/ticket-sales','Every screening has its own curve'],['Forecast & Scenarios','/scenarios','Resolution decision lab'],['Marketing','/marketing','Put the money where it is needed'],['Geography','/geography','Start close. Expand with evidence.'],['Campaigns','/campaigns','Plan, measure, then decide'],['Creatives','/creatives','Two ideas. One ticket decision.'],['Reports','/reports','The numbers. The decision. The next step.'],['Settings','/settings','A clear source of truth']] as const;
 test('honest seeded command center and all navigation routes',async({page})=>{
  await page.goto('/');await expect(page.getByRole('heading',{name:'Ticket Sales Command Center'})).toBeVisible();
  await expect(page.getByText('WHAT SHOULD WE DO TODAY?')).toBeVisible();
