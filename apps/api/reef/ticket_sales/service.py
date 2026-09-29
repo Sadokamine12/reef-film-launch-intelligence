@@ -3,8 +3,9 @@ from zoneinfo import ZoneInfo
 
 from reef.campaigns.service import budget
 from reef.forecasting.engine import BookingCurveForecast, ForecastInput, sales_velocity
+from reef.forecasting.historical import HistoricalRidgeModel
 from reef.marketing.decisions import decide
-from reef.models import Campaign, Project, Screening, Snapshot
+from reef.models import Campaign, HistoricalSnapshot, Project, Screening, Snapshot
 from reef.schemas import Rules
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -19,6 +20,8 @@ def dashboard(db: Session, project: Project, as_of: datetime | None = None) -> d
     screenings = list(
         db.scalars(select(Screening).where(Screening.project_id == project.id).order_by(Screening.date))
     )
+    history = list(db.scalars(select(HistoricalSnapshot).order_by(HistoricalSnapshot.observed_at)))
+    historical_model = HistoricalRidgeModel(history)
     rows = []
     for screening in screenings:
         snapshots = list(
@@ -47,8 +50,9 @@ def dashboard(db: Session, project: Project, as_of: datetime | None = None) -> d
             and today >= screening.sales_open_date
         )
         v3, v7 = sales_velocity(snapshots, 3, as_of), sales_velocity(snapshots, 7, as_of)
+        historical = historical_model.final_forecast(screening.date, screening.capacity)
         forecast = BookingCurveForecast().predict(
-            ForecastInput(days, screening.capacity, sold, v3, v7, stale), rules
+            ForecastInput(days, screening.capacity, sold, v3, v7, stale, historical), rules
         )
         decision = decide(
             sold=sold,
@@ -179,5 +183,6 @@ def dashboard(db: Session, project: Project, as_of: datetime | None = None) -> d
         "budget": money,
         "curve": [p.model_dump() for p in rules.curve],
         "rules": rules.model_dump(mode="json"),
+        "forecast_model": historical_model.metadata(),
         "revision": project.revision,
     }

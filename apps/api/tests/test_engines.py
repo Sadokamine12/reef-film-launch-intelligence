@@ -4,6 +4,7 @@ from types import SimpleNamespace
 import pytest
 from pydantic import ValidationError
 from reef.forecasting.engine import BookingCurveForecast, ForecastInput, curve_target, sales_velocity
+from reef.forecasting.historical import HistoricalRidgeModel
 from reef.integrations.adapters import parse_campaign_csv
 from reef.marketing.decisions import decide
 from reef.schemas import Rules, SnapshotInput
@@ -79,10 +80,15 @@ def test_velocity_requires_full_window_and_handles_refunds():
     assert sales_velocity(rows, 3, now) == -1
 
 
-def test_no_forecast_without_current_evidence():
+def test_no_forecast_without_current_or_historical_evidence():
     provider = BookingCurveForecast()
-    for values in [ForecastInput(14, 109, None, None, None, False), ForecastInput(14, 109, 40, 2, 2, True)]:
-        assert provider.predict(values, Rules())["base"] is None
+    assert provider.predict(ForecastInput(14, 109, None, None, None, False), Rules())["base"] is None
+
+
+def test_stale_observation_is_retained_as_conservative_floor_without_history():
+    pred = BookingCurveForecast().predict(ForecastInput(14, 109, 40, 2, 2, True), Rules())
+    assert pred["low"] == pred["base"] == pred["high"] == 40
+    assert pred["confidence"] == "LOW"
 
 
 @pytest.mark.parametrize("sold", range(0, 110, 3))
@@ -127,3 +133,55 @@ def test_manual_ticket_attribution():
         b"date,spend_eur,impressions,clicks,attributed_tickets\n2026-09-01,5.50,1000,30,2", "MANUAL"
     )
     assert rows[0].attributed_tickets == 2
+
+
+def test_historical_baseline_allows_presales_and_stale_forecasts():
+    historical = {
+        "low": 35,
+        "base": 55,
+        "high": 75,
+        "range_label": "Bootstrap planning range",
+        "evidence": {"method": "historical-ridge-v1"},
+        "warnings": ["proxy data"],
+    }
+    provider = BookingCurveForecast()
+    presales = provider.predict(ForecastInput(14, 109, None, None, None, False, historical), Rules())
+    assert (presales["low"], presales["base"], presales["high"]) == (35, 55, 75)
+    assert presales["source_label"] == "MODEL ESTIMATE"
+    assert presales["confidence"] == "LOW"
+
+    stale = provider.predict(ForecastInput(14, 109, 60, None, None, True, historical), Rules())
+    assert stale["low"] >= 60
+    assert stale["base"] >= 60
+    assert stale["high"] >= stale["base"]
+    assert "stale" in stale["confidence_note"].lower()
+
+
+def test_historical_model_groups_repeated_snapshots_by_event():
+    rows = []
+    events = [
+        (date(2026, 10, 14), "https://example.test/a", 35),
+        (date(2026, 10, 16), "https://example.test/b", 28),
+        (date(2026, 10, 17), "https://example.test/c", 42),
+        (date(2026, 10, 18), "https://example.test/d", 48),
+    ]
+    for show_date, source_url, occupied in events:
+        for days_before, delta in [(40, 0), (20, 12)]:
+            rows.append(
+                SimpleNamespace(
+                    show_date=show_date,
+                    days_before=days_before,
+                    unavailable_seats=occupied + delta,
+                    capacity=109,
+                    source_url=source_url,
+                )
+            )
+    model = HistoricalRidgeModel(rows)
+    metadata = model.metadata()
+    assert metadata["rows"] == 8
+    assert metadata["unique_events"] == 4
+    assert metadata["validation"]["grouping"] == "leave-one-event-out"
+    forecast = model.final_forecast(date(2027, 2, 5), 109)
+    assert forecast is not None
+    assert 0 <= forecast["low"] <= forecast["base"] <= forecast["high"] <= 109
+    assert forecast["confidence"] == "LOW"

@@ -53,6 +53,7 @@ class ForecastInput:
     velocity_3: float | None
     velocity_7: float | None
     stale: bool
+    historical: dict | None = None
 
 
 class ForecastProvider(Protocol):
@@ -66,40 +67,91 @@ class BookingCurveForecast:
         required = (
             None if values.sold is None else round(max(0, target - values.sold) / max(values.days, 1), 2)
         )
+        historical = values.historical
         common = {
             "required_sales_pace": required,
             "gap_to_target": None if values.sold is None else max(0, ceil(today - values.sold)),
-            "source_label": "ESTIMATED",
-            "method": "booking-curve-v1",
+            "source_label": "MODEL ESTIMATE" if historical else "ESTIMATED",
+            "method": "historical-ridge-v1 + live-booking-blend" if historical else "booking-curve-v1",
             "confidence": "LOW",
             "confidence_note": "Planning range; not a calibrated prediction interval.",
+            "evidence": historical.get("evidence") if historical else None,
+            "warnings": historical.get("warnings", []) if historical else [],
+            "range_label": historical.get("range_label") if historical else "Planning range",
         }
-        if values.sold is None or values.stale:
+        if values.sold is None:
+            if historical:
+                return {
+                    **common,
+                    "low": historical["low"],
+                    "base": historical["base"],
+                    "high": historical["high"],
+                    "confidence_note": (
+                        "Historical pre-sales baseline only; no Resolution-specific ticket observation yet."
+                    ),
+                }
             return {
                 **common,
                 "low": None,
                 "base": None,
                 "high": None,
-                "confidence_note": "A current ticket observation is required.",
+                "confidence_note": "No historical baseline or current ticket observation is available.",
             }
         sold = values.sold
+        if values.stale:
+            if historical:
+                base = min(values.capacity, max(sold, historical["base"]))
+                return {
+                    **common,
+                    "low": max(sold, min(base, historical["low"])),
+                    "base": base,
+                    "high": max(base, min(values.capacity, historical["high"])),
+                    "confidence_note": (
+                        "Latest Resolution observation is stale; forecast falls back to the historical baseline "
+                        "with observed sales as a lower bound."
+                    ),
+                    "warnings": [*common["warnings"], "Latest Resolution ticket observation is stale."],
+                }
+            return {
+                **common,
+                "low": sold,
+                "base": sold,
+                "high": sold,
+                "confidence_note": "Latest observation is stale and no historical baseline is available.",
+            }
         curve_projection = max(sold, target + sold - today)
         pace = values.velocity_3 if values.velocity_3 is not None else values.velocity_7
-        projected = (
-            curve_projection
-            if pace is None
-            else 0.55 * curve_projection + 0.45 * (sold + max(0, pace) * max(0, values.days))
-        )
+        pace_projection = sold + max(0, pace or 0) * max(0, values.days)
+        if historical:
+            historical_base = max(sold, historical["base"])
+            if pace is None:
+                projected = 0.55 * historical_base + 0.45 * curve_projection
+            else:
+                projected = 0.45 * historical_base + 0.30 * curve_projection + 0.25 * pace_projection
+        else:
+            projected = (
+                curve_projection
+                if pace is None
+                else 0.55 * curve_projection + 0.45 * pace_projection
+            )
         base = min(values.capacity, max(sold, round(projected)))
         if values.days <= 0:
             # On show day the observed count is the conservative estimate. Final reconciliation is separate.
             base = sold
-        width = max(5, round(values.capacity * (0.20 if pace is None else 0.12)))
+        historical_width = (
+            max(base - historical["low"], historical["high"] - base) if historical else 0
+        )
+        width = max(5, historical_width, round(values.capacity * (0.20 if pace is None else 0.12)))
         return {
             **common,
             "low": max(sold, base - width),
             "base": base,
             "high": min(values.capacity, base + width),
             "confidence": "LOW" if pace is None else "MEDIUM",
-            "confidence_note": "Heuristic estimate; not validated against final Resolution attendance.",
+            "confidence_note": (
+                "Historical baseline blended with current Resolution booking evidence; uncertainty remains "
+                "because historical rows are inventory snapshots rather than final attendance."
+                if historical
+                else "Heuristic estimate; not validated against final Resolution attendance."
+            ),
         }

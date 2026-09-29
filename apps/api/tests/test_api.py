@@ -64,6 +64,12 @@ def test_seed_and_real_database_dashboard(client):
     assert data["summary"]["tickets_sold"] is None
     assert data["today"]["recommended_budget_cents"] == 0
     assert len(client.get("/v1/history").json()["rows"]) == 26
+    assert data["forecast_model"]["rows"] == 26
+    assert data["forecast_model"]["unique_events"] == 13
+    assert data["forecast_model"]["validation"]["grouping"] == "leave-one-event-out"
+    assert data["forecast_model"]["validation"]["mae_tickets"] > 0
+    assert all(row["forecast"]["base"] is not None for row in data["screenings"])
+    assert all(row["forecast"]["source_label"] == "MODEL ESTIMATE" for row in data["screenings"])
 
 
 
