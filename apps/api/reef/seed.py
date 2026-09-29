@@ -28,7 +28,7 @@ def seed(db: Session):
             )
         )
         db.flush()
-    for day in [2, 9, 16, 23]:
+    for day in [2, 5, 6, 9, 16, 23]:
         sid = f"resolution-2027-02-{day:02}"
         if not db.get(Screening, sid):
             db.add(
@@ -85,8 +85,8 @@ def seed(db: Session):
             "creative-b",
             "Creative B — Event",
             "Event",
-            "Your Tuesday, in another dimension.",
-            "Resolution at ESO Supernova · [exact Tuesday] · Garching / U6. Book your ticket via ESO.",
+            "Your night, in another dimension.",
+            "Resolution at ESO Supernova · [screening date] · Garching / U6. Book your ticket via ESO.",
         ),
     ]:
         if not db.get(Creative, key):

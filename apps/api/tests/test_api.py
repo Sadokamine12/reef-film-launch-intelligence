@@ -51,11 +51,28 @@ def test_seed_and_real_database_dashboard(client):
     r = client.get("/v1/dashboard")
     assert r.status_code == 200, r.text
     data = r.json()
-    assert data["summary"]["capacity"] == 436
-    assert len(data["screenings"]) == 4
+    assert data["summary"]["capacity"] == 654
+    assert len(data["screenings"]) == 6
+    assert [row["date"] for row in data["screenings"]] == [
+        "2027-02-02",
+        "2027-02-05",
+        "2027-02-06",
+        "2027-02-09",
+        "2027-02-16",
+        "2027-02-23",
+    ]
     assert data["summary"]["tickets_sold"] is None
     assert data["today"]["recommended_budget_cents"] == 0
     assert len(client.get("/v1/history").json()["rows"]) == 26
+
+
+
+def test_seed_is_idempotent(db):
+    seed(db)
+    seed(db)
+    rows = db.query(Screening).order_by(Screening.date).all()
+    assert len(rows) == 6
+    assert sum(row.capacity for row in rows) == 654
 
 
 def test_snapshot_persists_and_duplicate_rejected(client):
@@ -74,10 +91,13 @@ def test_snapshot_persists_and_duplicate_rejected(client):
     assert client.post("/v1/ticket-sales", json=payload).status_code == 201
 
 
-def test_capacity_and_future_guard(client):
+def test_capacity_and_future_guard(client, db):
+    screening = db.get(Screening, "resolution-2027-02-02")
+    screening.capacity = 80
+    db.commit()
     payload = {
         "screening_id": "resolution-2027-02-02",
-        "tickets_sold": 110,
+        "tickets_sold": 81,
         "observed_at": datetime.now(timezone.utc).isoformat(),
     }
     assert client.post("/v1/ticket-sales", json=payload).status_code == 422

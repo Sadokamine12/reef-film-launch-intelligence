@@ -65,7 +65,7 @@ class RuleUpdate(StrictModel):
 class SnapshotInput(StrictModel):
     screening_id: str
     observed_at: datetime
-    tickets_sold: int = Field(ge=0, le=10000)
+    tickets_sold: int = Field(ge=0)
     note: str = Field(default="", max_length=1000)
 
     @field_validator("observed_at")

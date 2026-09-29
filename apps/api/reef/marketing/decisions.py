@@ -41,7 +41,7 @@ def decide(
         return {
             **decision,
             "status": "NEAR_FULL",
-            "action": "Stop advertising this screening. Promote the next eligible Tuesday.",
+            "action": "Stop advertising this screening. Promote the next eligible screening.",
             "reason": f"{sold} tickets observed; stop threshold is {rules.near_full_tickets}.",
         }
     if not sales_open:

@@ -1,0 +1,216 @@
+diff --git a/apps/api/reef/marketing/decisions.py b/apps/api/reef/marketing/decisions.py
+index 4806960..7bc84d3 100644
+--- a/apps/api/reef/marketing/decisions.py
++++ b/apps/api/reef/marketing/decisions.py
+@@ -41,7 +41,7 @@ def decide(
+         return {
+             **decision,
+             "status": "NEAR_FULL",
+-            "action": "Stop advertising this screening. Promote the next eligible Tuesday.",
++            "action": "Stop advertising this screening. Promote the next eligible screening.",
+             "reason": f"{sold} tickets observed; stop threshold is {rules.near_full_tickets}.",
+         }
+     if not sales_open:
+diff --git a/apps/api/reef/schemas.py b/apps/api/reef/schemas.py
+index 31328cf..a88fe2b 100644
+--- a/apps/api/reef/schemas.py
++++ b/apps/api/reef/schemas.py
+@@ -65,7 +65,7 @@ class RuleUpdate(StrictModel):
+ class SnapshotInput(StrictModel):
+     screening_id: str
+     observed_at: datetime
+-    tickets_sold: int = Field(ge=0, le=10000)
++    tickets_sold: int = Field(ge=0)
+     note: str = Field(default="", max_length=1000)
+ 
+     @field_validator("observed_at")
+diff --git a/apps/api/reef/seed.py b/apps/api/reef/seed.py
+index 4931a3f..73b9cfe 100644
+--- a/apps/api/reef/seed.py
++++ b/apps/api/reef/seed.py
+@@ -28,7 +28,7 @@ def seed(db: Session):
+             )
+         )
+         db.flush()
+-    for day in [2, 9, 16, 23]:
++    for day in [2, 5, 6, 9, 16, 23]:
+         sid = f"resolution-2027-02-{day:02}"
+         if not db.get(Screening, sid):
+             db.add(
+@@ -85,8 +85,8 @@ def seed(db: Session):
+             "creative-b",
+             "Creative B — Event",
+             "Event",
+-            "Your Tuesday, in another dimension.",
+-            "Resolution at ESO Supernova · [exact Tuesday] · Garching / U6. Book your ticket via ESO.",
++            "Your night, in another dimension.",
++            "Resolution at ESO Supernova · [screening date] · Garching / U6. Book your ticket via ESO.",
+         ),
+     ]:
+         if not db.get(Creative, key):
+diff --git a/apps/api/reef/ticket_sales/service.py b/apps/api/reef/ticket_sales/service.py
+index 3af9829..ce29da4 100644
+--- a/apps/api/reef/ticket_sales/service.py
++++ b/apps/api/reef/ticket_sales/service.py
+@@ -149,7 +149,7 @@ def dashboard(db: Session, project: Project, as_of: datetime | None = None) -> d
+     elif first["decision"]["status"] == "DATA_NEEDED":
+         headline = "Update ticket sales. Make the next decision with evidence."
+     elif first["decision"]["status"] == "NEAR_FULL":
+-        headline = "Stop spend on near-full shows. Move attention to the next Tuesday."
++        headline = "Stop spend on near-full shows. Move attention to the next screening."
+     elif first["decision"]["status"] == "COMPLETE":
+         headline = "Close the campaign. Capture what worked."
+     else:
+diff --git a/apps/api/tests/test_api.py b/apps/api/tests/test_api.py
+index a12c7b4..3bdea88 100644
+--- a/apps/api/tests/test_api.py
++++ b/apps/api/tests/test_api.py
+@@ -51,13 +51,30 @@ def test_seed_and_real_database_dashboard(client):
+     r = client.get("/v1/dashboard")
+     assert r.status_code == 200, r.text
+     data = r.json()
+-    assert data["summary"]["capacity"] == 436
+-    assert len(data["screenings"]) == 4
++    assert data["summary"]["capacity"] == 654
++    assert len(data["screenings"]) == 6
++    assert [row["date"] for row in data["screenings"]] == [
++        "2027-02-02",
++        "2027-02-05",
++        "2027-02-06",
++        "2027-02-09",
++        "2027-02-16",
++        "2027-02-23",
++    ]
+     assert data["summary"]["tickets_sold"] is None
+     assert data["today"]["recommended_budget_cents"] == 0
+     assert len(client.get("/v1/history").json()["rows"]) == 26
+ 
+ 
++
++def test_seed_is_idempotent(db):
++    seed(db)
++    seed(db)
++    rows = db.query(Screening).order_by(Screening.date).all()
++    assert len(rows) == 6
++    assert sum(row.capacity for row in rows) == 654
++
++
+ def test_snapshot_persists_and_duplicate_rejected(client):
+     payload = {
+         "screening_id": "resolution-2027-02-02",
+@@ -74,10 +91,13 @@ def test_snapshot_persists_and_duplicate_rejected(client):
+     assert client.post("/v1/ticket-sales", json=payload).status_code == 201
+ 
+ 
+-def test_capacity_and_future_guard(client):
++def test_capacity_and_future_guard(client, db):
++    screening = db.get(Screening, "resolution-2027-02-02")
++    screening.capacity = 80
++    db.commit()
+     payload = {
+         "screening_id": "resolution-2027-02-02",
+-        "tickets_sold": 110,
++        "tickets_sold": 81,
+         "observed_at": datetime.now(timezone.utc).isoformat(),
+     }
+     assert client.post("/v1/ticket-sales", json=payload).status_code == 422
+diff --git a/apps/web/app/marketing/page.tsx b/apps/web/app/marketing/page.tsx
+index 7c8ecc4..912d79e 100644
+--- a/apps/web/app/marketing/page.tsx
++++ b/apps/web/app/marketing/page.tsx
+@@ -17,7 +17,7 @@ export default function MarketingPage(){
+  ['Prepare booking and tracking',`Before ${fullDate(d.rules.sales_open_target)}. Confirm all four ESO links, screening times, ticket reporting and creative copy.`,'€0'],
+  ['Observe without paid advertising','Record an organic baseline. Review 48 hours after confirmed ticket opening.','€0'],
+  ['Run a controlled initial test',`${fullDate(d.rules.paid_test_start)}–${shortDate(d.rules.paid_test_end)}. Only activate for a behind-target show with current sales data.`,`${money(d.rules.meta_test_cents)} Meta + ${money(d.rules.google_test_cents)} Google`],
+- ['Scale conditionally',`Review after ${d.rules.campaign_days} days. Keep Zone A and B first. Stop the show at ${d.rules.near_full_tickets} tickets and reassess the next Tuesday.`,'Within remaining ceilings']
++ ['Scale conditionally',`Review after ${d.rules.campaign_days} days. Keep Zone A and B first. Stop the show at ${d.rules.near_full_tickets} tickets and reassess the next screening.`,'Within remaining ceilings']
+  ].map(([title,body,spend],i)=><div className="plan-step" key={title}><span className="step-number">{i+1}</span><div><h3>{title}</h3><p>{body}</p><span className="step-budget">{spend}</span></div></div>)}</Panel>
+- <Panel title="Management rules"><Table><thead><tr><th>Position</th><th>Trigger</th><th>Response</th></tr></thead><tbody><tr><td><StatusBadge status="ON_TRACK"/></td><td>At / above target</td><td>€0 extra</td></tr><tr><td><StatusBadge status="WATCH"/></td><td>{Math.round(d.rules.watch_ratio*100)}–99% of target</td><td>{money(d.rules.watch_daily_cents)}/day · {d.rules.campaign_days} days</td></tr><tr><td><StatusBadge status="ACTION"/></td><td>Below {Math.round(d.rules.watch_ratio*100)}%</td><td>{money(d.rules.action_daily_cents)}/day recovery</td></tr><tr><td><StatusBadge status="NEAR_FULL"/></td><td>{d.rules.near_full_tickets}+ tickets</td><td>Stop and promote next Tuesday</td></tr></tbody></Table><p className="microcopy section-gap">Missing or older-than-{d.rules.stale_after_hours}-hour sales observations suspend paid recommendations. Rules are maintained in Settings and applied by the API.</p></Panel></div></>;
++ <Panel title="Management rules"><Table><thead><tr><th>Position</th><th>Trigger</th><th>Response</th></tr></thead><tbody><tr><td><StatusBadge status="ON_TRACK"/></td><td>At / above target</td><td>€0 extra</td></tr><tr><td><StatusBadge status="WATCH"/></td><td>{Math.round(d.rules.watch_ratio*100)}–99% of target</td><td>{money(d.rules.watch_daily_cents)}/day · {d.rules.campaign_days} days</td></tr><tr><td><StatusBadge status="ACTION"/></td><td>Below {Math.round(d.rules.watch_ratio*100)}%</td><td>{money(d.rules.action_daily_cents)}/day recovery</td></tr><tr><td><StatusBadge status="NEAR_FULL"/></td><td>{d.rules.near_full_tickets}+ tickets</td><td>Stop and promote next screening</td></tr></tbody></Table><p className="microcopy section-gap">Missing or older-than-{d.rules.stale_after_hours}-hour sales observations suspend paid recommendations. Rules are maintained in Settings and applied by the API.</p></Panel></div></>;
+ }
+diff --git a/apps/web/app/page.tsx b/apps/web/app/page.tsx
+index 9a1b85b..4bf1020 100644
+--- a/apps/web/app/page.tsx
++++ b/apps/web/app/page.tsx
+@@ -5,7 +5,7 @@ import {ArrowUpRight,CalendarDays,MapPin,Radio,Ticket,Armchair,Wallet,Activity,L
+ import {Button,Progress} from '@reef/ui';
+ import type {Dashboard} from '@reef/types';
+ import {useResource} from '@/lib/hooks';
+-import {money,number,shortDate,fullDate} from '@/lib/format';
++import {money,number,shortDate,fullDate,weekday} from '@/lib/format';
+ import {PageTitle,Panel,Metric,Loading,ErrorState,StatusBadge,SourceBadge,TextLink} from '@/components/shared';
+ import {BookingChart} from '@/components/booking-chart';
+ import {SalesEntry} from '@/components/sales-entry';
+@@ -13,10 +13,10 @@ const GeoMap=dynamic(()=>import('@/components/geo-map'),{ssr:false});
+ export default function DashboardPage(){
+  const {data:d,error,loading,refresh}=useResource<Dashboard>('/dashboard');
+  if(loading)return <Loading/>;if(error||!d)return <ErrorState message={error} retry={refresh}/>;
+- return <><PageTitle eyebrow="RESOLUTION / FEBRUARY 2027" title="Ticket Sales Command Center" description="Four Tuesdays at ESO Supernova · 436 seats · One clear next move" action={<SalesEntry screenings={d.screenings} onSaved={refresh}/>}/>
++ return <><PageTitle eyebrow="RESOLUTION / FEBRUARY 2027" title="Ticket Sales Command Center" description={`${d.screenings.length} screenings at ESO Supernova · ${d.summary.capacity} seats · One clear next move`} action={<SalesEntry screenings={d.screenings} onSaved={refresh}/>}/>
+  <section className="action-hero" aria-labelledby="today-heading"><div className="action-main"><div className="action-label"><Lightbulb size={18}/>WHAT SHOULD WE DO TODAY?</div><h2 id="today-heading">{d.today.headline}</h2><p>{d.today.action}</p><div className="action-meta"><div><Radio size={17}/><div><span>Channel</span><strong>{d.today.channel}</strong></div></div><div><MapPin size={17}/><div><span>Where</span><strong>{d.today.geography}</strong></div></div><div><CalendarDays size={17}/><div><span>Next review</span><strong>{fullDate(d.today.next_review)}</strong></div></div></div></div><aside className="action-aside"><span>Recommended commitment</span><strong>{money(d.summary.recommended_budget_cents)}</strong><p>{d.summary.recommended_budget_cents?`${money(d.today.daily_budget_cents)}/day for ${d.today.duration_days} days on the priority show.`:'The budget is a ceiling. There is no need to spend it.'}</p><Button asChild variant="outline"><Link href="/marketing">View action plan<ArrowUpRight size={16}/></Link></Button></aside></section>
+- <div className="kpi-grid"><Metric label="Tickets observed" value={number(d.summary.tickets_sold)} detail={d.summary.observed_screenings?`${d.summary.observed_screenings} of 4 screenings observed`:'Awaiting first ESO sales observation'} icon={<Ticket/>}/><Metric label="Seats remaining" value={number(d.summary.seats_remaining)} detail={`${d.summary.capacity} total seats across four Tuesdays`} icon={<Armchair/>}/><Metric label="Target by today" value={d.today.status==='PRE_LAUNCH'?'Pre-launch':number(d.summary.target_today)} detail="Management booking curve" icon={<Activity/>}/><Metric label="Campaign ceiling" value={money(d.budget.ceiling_cents)} detail={`${money(d.budget.spent_cents)} recorded spend · ${money(d.budget.reserve_cents)} reserve`} icon={<Wallet/>}/></div>
+- <div className="dashboard-row"><Panel title="Screening control" aside={<TextLink href="/ticket-sales">All screenings</TextLink>}><div className="screenings-grid">{d.screenings.map(s=><Link href={`/ticket-sales?screening=${s.id}`} key={s.id} className="screening-card"><div className="screening-date"><strong>{shortDate(s.date)}</strong><span>Tue</span></div><StatusBadge status={s.decision.status}/><div className="screening-sold">{number(s.tickets_sold)}<span>/ {s.capacity}</span></div><Progress value={(s.tickets_sold??0)/s.capacity*100} label={`${shortDate(s.date)} tickets sold`}/><p>{s.tickets_sold===null?'No confirmed sales observation':`${number(s.seats_remaining)} seats remaining · target ${s.decision.target_today}`}</p><div className="screening-note"><strong>{s.forecast.base===null?'Forecast awaiting data':`${s.forecast.low}–${s.forecast.high} expected tickets`}</strong><p>{s.forecast.base===null?'Update sales to unlock a forecast.':`Base estimate: ${s.forecast.base} tickets`}</p></div><div className="screening-bottom"><span>{s.days_until} days to go</span><strong>{money(s.decision.recommended_budget_cents)}</strong></div></Link>)}</div><p className="chart-caption" style={{marginTop:15}}>Screening times and ticket-opening dates await ESO confirmation.</p></Panel>
++ <div className="kpi-grid"><Metric label="Tickets observed" value={number(d.summary.tickets_sold)} detail={d.summary.observed_screenings?`${d.summary.observed_screenings} of ${d.screenings.length} screenings observed`:'Awaiting first ESO sales observation'} icon={<Ticket/>}/><Metric label="Seats remaining" value={number(d.summary.seats_remaining)} detail={`${d.summary.capacity} total seats across ${d.screenings.length} screenings`} icon={<Armchair/>}/><Metric label="Target by today" value={d.today.status==='PRE_LAUNCH'?'Pre-launch':number(d.summary.target_today)} detail="Management booking curve" icon={<Activity/>}/><Metric label="Campaign ceiling" value={money(d.budget.ceiling_cents)} detail={`${money(d.budget.spent_cents)} recorded spend · ${money(d.budget.reserve_cents)} reserve`} icon={<Wallet/>}/></div>
++ <div className="dashboard-row"><Panel title="Screening control" aside={<TextLink href="/ticket-sales">All screenings</TextLink>}><div className="screenings-grid">{d.screenings.map(s=><Link href={`/ticket-sales?screening=${s.id}`} key={s.id} className="screening-card"><div className="screening-date"><strong>{shortDate(s.date)}</strong><span>{weekday(s.date)}</span></div><StatusBadge status={s.decision.status}/><div className="screening-sold">{number(s.tickets_sold)}<span>/ {s.capacity}</span></div><Progress value={(s.tickets_sold??0)/s.capacity*100} label={`${shortDate(s.date)} tickets sold`}/><p>{s.tickets_sold===null?'No confirmed sales observation':`${number(s.seats_remaining)} seats remaining · target ${s.decision.target_today}`}</p><div className="screening-note"><strong>{s.forecast.base===null?'Forecast awaiting data':`${s.forecast.low}–${s.forecast.high} expected tickets`}</strong><p>{s.forecast.base===null?'Update sales to unlock a forecast.':`Base estimate: ${s.forecast.base} tickets`}</p></div><div className="screening-bottom"><span>{s.days_until} days to go</span><strong>{money(s.decision.recommended_budget_cents)}</strong></div></Link>)}</div><p className="chart-caption" style={{marginTop:15}}>Screening times and ticket-opening dates await ESO confirmation.</p></Panel>
+  <Panel title="Healthy booking curve" aside={<SourceBadge source="PLANNING ASSUMPTION"/>}><BookingChart curve={d.curve}/><div className="legend"><span><i/>Management target</span><span>One screening · 109 seats</span></div><p className="chart-caption">Days before screening · Final target: {d.curve.find(p=>p.days===0)?.tickets} tickets</p></Panel></div>
+  <div className="three-columns"><Panel title="Advertising operating plan" aside={<TextLink href="/marketing">View plan</TextLink>}><div className="plan-step"><span className="step-number">1</span><div><h3>Prepare the launch</h3><p>Confirm ESO booking links, tracking and creative.</p><span className="step-budget">Additional spend: €0</span></div></div><div className="plan-step"><span className="step-number">2</span><div><h3>Measure the organic baseline</h3><p>Record ticket sales. Review 48 hours after opening.</p><span className="step-budget">Healthy shows receive €0 extra</span></div></div><div className="plan-step"><span className="step-number">3</span><div><h3>Test only when a show needs help</h3><p>{money(d.rules.meta_test_cents)} Meta + {money(d.rules.google_test_cents)} Google. Review before scaling.</p><span className="step-budget">{fullDate(d.rules.paid_test_start)} · Planning assumption</span></div></div></Panel>
+  <Panel title="Where to advertise" aside={<TextLink href="/geography">Explore</TextLink>}><GeoMap small lat={d.project.latitude} lon={d.project.longitude}/><div className="zone-mini-list"><div><strong>Zone A</strong><span>0–15 km · Core</span></div><div><strong>Zone B</strong><span>15–30 km · Priority</span></div><div><strong>Zone C</strong><span>30–50 km · Test</span></div></div></Panel>
+diff --git a/apps/web/app/settings/page.tsx b/apps/web/app/settings/page.tsx
+index 88ac329..addec6d 100644
+--- a/apps/web/app/settings/page.tsx
++++ b/apps/web/app/settings/page.tsx
+@@ -5,13 +5,13 @@ import {Button,Input,Label,Select,Table} from '@reef/ui';
+ import type {Dashboard,Rules,Screening,Integration} from '@reef/types';
+ import {useResource} from '@/lib/hooks';
+ import {api} from '@/lib/api';
+-import {shortDate} from '@/lib/format';
++import {shortDate,weekday} from '@/lib/format';
+ import {PageTitle,Panel,Loading,ErrorState,SourceBadge,Feedback} from '@/components/shared';
+ import {useUser} from '@/components/shell';
+ export default function SettingsPage(){const {data:d,error,loading,refresh}=useResource<Dashboard>('/dashboard');const sources=useResource<Integration[]>('/integrations');if(loading)return <Loading/>;if(error||!d)return <ErrorState message={error} retry={refresh}/>;return <><PageTitle eyebrow="WORKSPACE SETTINGS" title="A clear source of truth" description="Confirm the screening facts, configure decision rules, and track data readiness."/><div className="two-columns"><RulesForm key={d.revision} dashboard={d} onSaved={refresh}/><Panel title="Data sources" aside={<Database size={18}/>}><p className="microcopy">Source badges describe the evidence behind each value. No external provider is live yet.</p>{sources.error?<Feedback error={sources.error}/>:sources.data?.map(s=><div className="integration-row" key={s.provider}><Database size={19}/><div className="integration-text"><h3>{s.provider}</h3><p>{s.detail}</p><span className="microcopy">Last successful sync: never</span></div><SourceBadge source={s.provider==='Manual CSV'?'READY':'NOT CONNECTED'}/></div>)}<div className="budget-foot section-gap"><strong>LIVE</strong> — retrieved from a connected source<br/><strong>OBSERVED</strong> — recorded or imported evidence<br/><strong>ESTIMATED</strong> — calculated forecast or recommendation<br/><strong>PLANNING ASSUMPTION</strong> — an unverified target or plan</div></Panel></div><Panel title="Confirm screening details" className="section-gap"><p className="microcopy" style={{marginBottom:22}}>Dates and capacity follow the launch brief. Times and the 16 November ticket-opening target require ESO confirmation. Confirm each official HTTPS booking URL before enabling paid recommendations.</p><div className="two-columns">{d.screenings.map(s=><ScreeningForm key={s.id} screening={s} onSaved={refresh}/>)}</div></Panel><div className="notice section-gap"><ShieldCheck size={18}/><span>Changes to sales, budgets, creatives and campaigns are recorded in the audit trail. Accounts are invitation-only with editor or viewer access.</span></div><AuditLog/></>;}
+ function RulesForm({dashboard:d,onSaved}:{dashboard:Dashboard;onSaved:()=>void}){const user=useUser();const [busy,setBusy]=useState(false),[error,setError]=useState(''),[success,setSuccess]=useState('');const fields:[keyof Rules,string,number,number][]=[['total_ceiling_cents','Total ceiling (€)',100,500],['meta_ceiling_cents','Meta ceiling (€)',100,500],['google_ceiling_cents','Google ceiling (€)',100,500],['reserve_cents','Protected reserve (€)',100,500],['watch_daily_cents','Watch daily budget (€)',100,25],['action_daily_cents','Recovery daily budget (€)',100,25],['near_full_tickets','Stop ads at (tickets)',1,109],['watch_ratio','Watch threshold (%)',.01,99],['stale_after_hours','Data freshness (hours)',1,168],['paid_window_days','Paid window (days)',1,60]];
+  return <Panel title="Business rules"><form onSubmit={async e=>{e.preventDefault();setBusy(true);setError('');setSuccess('');const f=new FormData(e.currentTarget);const rules={...d.rules};for(const [key,,factor] of fields){(rules as unknown as Record<string,unknown>)[key]=Number(f.get(key))*factor;}try{await api('/rules',{method:'PUT',body:JSON.stringify({revision:d.revision,rules})});setSuccess('Rules saved. Recommendations have been recalculated.');onSaved();}catch(err){setError(err instanceof Error?err.message:'Unable to save rules');}finally{setBusy(false);}}}><div className="form-grid">{fields.map(([key,label,factor,max])=><div className="field" key={key}><Label htmlFor={key}>{label}</Label><Input id={key} name={key} type="number" min={key==='action_daily_cents'?15:0} max={max} step={factor===100?'.01':'1'} defaultValue={Number(d.rules[key])/factor} required disabled={user?.role==='viewer'}/></div>)}</div><p className="microcopy">Channel ceilings plus reserve cannot exceed €500. The €70 / €30 initial test must fit inside its channel ceilings. Reserve reallocation must be explicit.</p><Feedback error={error} success={success}/><div className="form-actions"><Button type="submit" disabled={busy||user?.role==='viewer'}><Save size={16}/>{busy?'Saving…':'Save business rules'}</Button></div></form></Panel>;
+ }
+-function ScreeningForm({screening:s,onSaved}:{screening:Screening;onSaved:()=>void}){const user=useUser();const [error,setError]=useState(''),[success,setSuccess]=useState(''),[busy,setBusy]=useState(false);return <form style={{border:'1px solid var(--line)',borderRadius:9,padding:20}} onSubmit={async e=>{e.preventDefault();setBusy(true);setError('');setSuccess('');const f=new FormData(e.currentTarget);try{await api(`/screenings/${s.id}`,{method:'PUT',body:JSON.stringify({time:f.get('time')||null,booking_url:f.get('booking_url')||null,sales_open_date:f.get('sales_open_date')||null,sales_open_confirmed:f.get('sales_open_confirmed')==='on'})});setSuccess('Screening details saved.');onSaved();}catch(err){setError(err instanceof Error?err.message:'Unable to save screening');}finally{setBusy(false);}}}><h3 style={{marginBottom:17}}>{shortDate(s.date)} 2027 · Tuesday · {s.capacity} seats</h3><div className="field"><Label htmlFor={`url-${s.id}`}>Official ESO booking URL</Label><Input name="booking_url" id={`url-${s.id}`} type="url" defaultValue={s.booking_url??''} placeholder="https://supernova.eso.org/…"/></div><div className="form-grid"><div className="field"><Label htmlFor={`time-${s.id}`}>Confirmed screening time (Berlin)</Label><Input id={`time-${s.id}`} name="time" type="time" defaultValue={s.time??''}/></div><div className="field"><Label htmlFor={`open-${s.id}`}>Ticket sales opening date</Label><Input id={`open-${s.id}`} name="sales_open_date" type="date" defaultValue={s.sales_open_date??''}/></div></div><label className="checkbox-label"><input name="sales_open_confirmed" type="checkbox" defaultChecked={s.sales_open_confirmed}/>ESO has confirmed this ticket-opening date</label><Feedback error={error} success={success}/><div className="form-actions"><Button size="sm" type="submit" variant="outline" disabled={busy||user?.role==='viewer'}>{busy?'Saving…':'Save screening'}</Button></div></form>;}
++function ScreeningForm({screening:s,onSaved}:{screening:Screening;onSaved:()=>void}){const user=useUser();const [error,setError]=useState(''),[success,setSuccess]=useState(''),[busy,setBusy]=useState(false);return <form style={{border:'1px solid var(--line)',borderRadius:9,padding:20}} onSubmit={async e=>{e.preventDefault();setBusy(true);setError('');setSuccess('');const f=new FormData(e.currentTarget);try{await api(`/screenings/${s.id}`,{method:'PUT',body:JSON.stringify({time:f.get('time')||null,booking_url:f.get('booking_url')||null,sales_open_date:f.get('sales_open_date')||null,sales_open_confirmed:f.get('sales_open_confirmed')==='on'})});setSuccess('Screening details saved.');onSaved();}catch(err){setError(err instanceof Error?err.message:'Unable to save screening');}finally{setBusy(false);}}}><h3 style={{marginBottom:17}}>{shortDate(s.date)} 2027 · {weekday(s.date)} · {s.capacity} seats</h3><div className="field"><Label htmlFor={`url-${s.id}`}>Official ESO booking URL</Label><Input name="booking_url" id={`url-${s.id}`} type="url" defaultValue={s.booking_url??''} placeholder="https://supernova.eso.org/…"/></div><div className="form-grid"><div className="field"><Label htmlFor={`time-${s.id}`}>Confirmed screening time (Berlin)</Label><Input id={`time-${s.id}`} name="time" type="time" defaultValue={s.time??''}/></div><div className="field"><Label htmlFor={`open-${s.id}`}>Ticket sales opening date</Label><Input id={`open-${s.id}`} name="sales_open_date" type="date" defaultValue={s.sales_open_date??''}/></div></div><label className="checkbox-label"><input name="sales_open_confirmed" type="checkbox" defaultChecked={s.sales_open_confirmed}/>ESO has confirmed this ticket-opening date</label><Feedback error={error} success={success}/><div className="form-actions"><Button size="sm" type="submit" variant="outline" disabled={busy||user?.role==='viewer'}>{busy?'Saving…':'Save screening'}</Button></div></form>;}
+ function AuditLog(){const user=useUser();return user?.role==='editor'?<AuditRows/>:null;}
+ function AuditRows(){const {data,error}=useResource<{id:string;created_at:string;actor:string;action:string;entity_id:string}[]>('/audit');return <Panel title="Recent changes" className="section-gap">{error?<Feedback error={error}/>:<Table><thead><tr><th>Time (Berlin)</th><th>Changed by</th><th>Action</th><th>Record</th></tr></thead><tbody>{data?.length?data.map(row=><tr key={row.id}><td>{new Date(row.created_at).toLocaleString('en-GB',{timeZone:'Europe/Berlin'})}</td><td>{row.actor}</td><td>{row.action}</td><td>{row.entity_id}</td></tr>):<tr><td colSpan={4}>No changes recorded yet.</td></tr>}</tbody></Table>}</Panel>;}
+diff --git a/apps/web/app/ticket-sales/page.tsx b/apps/web/app/ticket-sales/page.tsx
+index 1be512b..87de087 100644
+--- a/apps/web/app/ticket-sales/page.tsx
++++ b/apps/web/app/ticket-sales/page.tsx
+@@ -13,10 +13,10 @@ export default function TicketsPage(){
+  useEffect(()=>{const p=new URLSearchParams(window.location.search).get('screening');if(p)setSelected(p);},[]);
+  if(loading)return <Loading/>;if(error||!d)return <ErrorState message={error} retry={refresh}/>;const s=d.screenings.find(x=>x.id===selected)??d.screenings[0];
+  const historyGroups=[...new Map((history?.rows??[]).map(r=>[r.source_url,`${r.programme} · ${shortDate(r.show_date)}`])).entries()];
+- return <><PageTitle eyebrow="TICKET SALES" title="Every Tuesday has its own curve" description="Compare observed sales with the management target, then focus on the gap." action={<SalesEntry screenings={d.screenings} onSaved={refresh}/>}/><div className="toolbar"><div className="tabs" role="tablist" aria-label="Screenings">{d.screenings.map(x=><button role="tab" aria-selected={s.id===x.id} className="tab" key={x.id} onClick={()=>setSelected(x.id)}>{shortDate(x.date)}</button>)}</div><span className="microcopy">{s.days_until} days until screening · {s.time??'Time to be confirmed'}</span></div>
++ return <><PageTitle eyebrow="TICKET SALES" title="Every screening has its own curve" description="Compare observed sales with the management target, then focus on the gap." action={<SalesEntry screenings={d.screenings} onSaved={refresh}/>}/><div className="toolbar"><div className="tabs" role="tablist" aria-label="Screenings">{d.screenings.map(x=><button role="tab" aria-selected={s.id===x.id} className="tab" key={x.id} onClick={()=>setSelected(x.id)}>{shortDate(x.date)}</button>)}</div><span className="microcopy">{s.days_until} days until screening · {s.time??'Time to be confirmed'}</span></div>
+  <div className="split-layout"><Panel title={`${shortDate(s.date)} · Booking performance`} aside={<StatusBadge status={s.decision.status}/>}><div style={{height:310}}><BookingChart curve={d.curve} actual={s.actual_curve} history={(history?.rows??[]).filter(r=>r.source_url===compare)}/></div><div className="legend"><span><i/>Management target</span><span><i className="actual"/>Resolution observations</span>{compare&&<span>Archived ESO inventory (not confirmed sales)</span>}</div><div className="field section-gap"><label className="label" htmlFor="compare">Compare an archived ESO booking curve</label><Select id="compare" value={compare} onChange={e=>setCompare(e.target.value)}><option value="">Resolution only</option>{historyGroups.map(([url,label])=><option key={url} value={url}>{label}</option>)}</Select></div><p className="microcopy">Historical points come from archived ESO inventory on 23–24 September 2026. Unavailable seats may include holds. These curves do not establish final attendance or marketing lift.</p></Panel>
+  <Panel title="Expected final ticket sales" aside={<SourceBadge source="ESTIMATED"/>}><div className="forecast-range">{(['low','base','high'] as const).map(k=><div key={k}><span>{k.toUpperCase()}</span><strong>{number(s.forecast[k])}</strong></div>)}</div><p className="microcopy">{s.forecast.confidence_note}</p><div className="section-gap">{[['Observed tickets',number(s.tickets_sold)],['Seats remaining',number(s.seats_remaining)],['Target by today',number(s.decision.target_today)],['Sales needed today',number(s.forecast.gap_to_target)],['3-day velocity',`${number(s.velocity_3)} / day`],['7-day velocity',`${number(s.velocity_7)} / day`],['Required pace to final target',`${number(s.forecast.required_sales_pace)} / day`]].map(([k,v])=><div className="data-detail" key={k}><span>{k}</span><strong>{v}</strong></div>)}</div></Panel></div>
+  <div className="notice section-gap"><Info size={18}/><span>{s.decision.action} Recommended budget: <strong>{money(s.decision.recommended_budget_cents)}</strong>. {s.stale?'The latest observation is stale.':''}</span></div>
+  <Panel title="All screenings at a glance"><Table><thead><tr><th>Screening</th><th>Observed</th><th>Target</th><th>Gap</th><th>3-day pace</th><th>7-day pace</th><th>Final estimate</th><th>Status</th><th>Source</th></tr></thead><tbody>{d.screenings.map(r=><tr key={r.id}><td>{shortDate(r.date)}<small>{r.time??'Time TBC'}</small></td><td>{number(r.tickets_sold)} / {r.capacity}</td><td>{r.decision.target_today}</td><td>{number(r.forecast.gap_to_target)}</td><td>{number(r.velocity_3)}</td><td>{number(r.velocity_7)}</td><td>{r.forecast.base===null?'Awaiting data':`${r.forecast.low} / ${r.forecast.base} / ${r.forecast.high}`}</td><td><StatusBadge status={r.decision.status}/></td><td><SourceBadge source={r.source_label}/></td></tr>)}</tbody></Table></Panel>
+- <div className="two-columns section-gap"><Panel title="Management milestones" aside={<SourceBadge source="PLANNING ASSUMPTION"/>}><Table><thead><tr><th>Before screening</th><th>Target tickets</th><th>Occupancy</th></tr></thead><tbody>{d.curve.map(p=><tr key={p.days}><td>{p.days===0?'Show day':`${p.days} days`}</td><td>{p.tickets} / 109</td><td>{Math.round(p.tickets/109*100)}%</td></tr>)}</tbody></Table></Panel><Panel title="Observation history"><Table><thead><tr><th>Observed</th><th>Tickets</th><th>Days before</th></tr></thead><tbody>{s.actual_curve.length?s.actual_curve.toReversed().map(p=><tr key={p.observed_at}><td>{new Date(p.observed_at).toLocaleString('en-GB',{timeZone:'Europe/Berlin'})}</td><td>{p.tickets}</td><td>{p.days}</td></tr>):<tr><td colSpan={3}>No Resolution ticket observations yet.</td></tr>}</tbody></Table><p className="microcopy section-gap">Save the cumulative count each day. Three- and seven-day pace appear once a full observation window exists.</p></Panel></div></>;
++ <div className="two-columns section-gap"><Panel title="Management milestones" aside={<SourceBadge source="PLANNING ASSUMPTION"/>}><Table><thead><tr><th>Before screening</th><th>Target tickets</th><th>Occupancy</th></tr></thead><tbody>{d.curve.map(p=><tr key={p.days}><td>{p.days===0?'Show day':`${p.days} days`}</td><td>{p.tickets} / {s.capacity}</td><td>{Math.round(p.tickets/s.capacity*100)}%</td></tr>)}</tbody></Table></Panel><Panel title="Observation history"><Table><thead><tr><th>Observed</th><th>Tickets</th><th>Days before</th></tr></thead><tbody>{s.actual_curve.length?s.actual_curve.toReversed().map(p=><tr key={p.observed_at}><td>{new Date(p.observed_at).toLocaleString('en-GB',{timeZone:'Europe/Berlin'})}</td><td>{p.tickets}</td><td>{p.days}</td></tr>):<tr><td colSpan={3}>No Resolution ticket observations yet.</td></tr>}</tbody></Table><p className="microcopy section-gap">Save the cumulative count each day. Three- and seven-day pace appear once a full observation window exists.</p></Panel></div></>;
+ }
+diff --git a/apps/web/lib/format.ts b/apps/web/lib/format.ts
+index ccfcf01..46677a8 100644
+--- a/apps/web/lib/format.ts
++++ b/apps/web/lib/format.ts
+@@ -1,5 +1,6 @@
+ export const money=(cents:number|null|undefined)=>cents==null?'—':new Intl.NumberFormat('en-IE',{style:'currency',currency:'EUR',maximumFractionDigits:cents%100?2:0}).format(cents/100);
+ export const number=(value:number|null|undefined)=>value==null?'—':new Intl.NumberFormat('en-GB',{maximumFractionDigits:2}).format(value);
+ export const shortDate=(value:string)=>new Intl.DateTimeFormat('en-GB',{day:'2-digit',month:'short',timeZone:'Europe/Berlin'}).format(new Date(value.length===10?value+'T12:00:00Z':value));
++export const weekday=(value:string)=>new Intl.DateTimeFormat('en-GB',{weekday:'short',timeZone:'Europe/Berlin'}).format(new Date(value.length===10?value+'T12:00:00Z':value));
+ export const fullDate=(value:string)=>new Intl.DateTimeFormat('en-GB',{day:'numeric',month:'long',year:'numeric',timeZone:'Europe/Berlin'}).format(new Date(value.length===10?value+'T12:00:00Z':value));
+ export const percent=(value:number|null|undefined)=>value==null?'—':`${number(value)}%`;
+diff --git a/tests/e2e/workspace.spec.ts b/tests/e2e/workspace.spec.ts
+index 7d4637f..949b362 100644
+--- a/tests/e2e/workspace.spec.ts
++++ b/tests/e2e/workspace.spec.ts
+@@ -1,5 +1,5 @@
+ import {test,expect} from '@playwright/test';
+-const routes=[['Ticket Sales','/ticket-sales','Every Tuesday has its own curve'],['Marketing','/marketing','Put the money where it is needed'],['Geography','/geography','Start close. Expand with evidence.'],['Campaigns','/campaigns','Plan, measure, then decide'],['Creatives','/creatives','Two ideas. One ticket decision.'],['Reports','/reports','The numbers. The decision. The next step.'],['Settings','/settings','A clear source of truth']] as const;
++const routes=[['Ticket Sales','/ticket-sales','Every screening has its own curve'],['Marketing','/marketing','Put the money where it is needed'],['Geography','/geography','Start close. Expand with evidence.'],['Campaigns','/campaigns','Plan, measure, then decide'],['Creatives','/creatives','Two ideas. One ticket decision.'],['Reports','/reports','The numbers. The decision. The next step.'],['Settings','/settings','A clear source of truth']] as const;
+ test('honest seeded command center and all navigation routes',async({page})=>{
+  await page.goto('/');await expect(page.getByRole('heading',{name:'Ticket Sales Command Center'})).toBeVisible();
+  await expect(page.getByText('WHAT SHOULD WE DO TODAY?')).toBeVisible();

@@ -149,7 +149,7 @@ def dashboard(db: Session, project: Project, as_of: datetime | None = None) -> d
     elif first["decision"]["status"] == "DATA_NEEDED":
         headline = "Update ticket sales. Make the next decision with evidence."
     elif first["decision"]["status"] == "NEAR_FULL":
-        headline = "Stop spend on near-full shows. Move attention to the next Tuesday."
+        headline = "Stop spend on near-full shows. Move attention to the next screening."
     elif first["decision"]["status"] == "COMPLETE":
         headline = "Close the campaign. Capture what worked."
     else:
