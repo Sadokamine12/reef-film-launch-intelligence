@@ -1,0 +1,214 @@
+diff --git a/apps/web/app/audit/page.tsx b/apps/web/app/audit/page.tsx
+new file mode 100644
+index 0000000..1111111
+--- /dev/null
++++ b/apps/web/app/audit/page.tsx
+@@ -0,0 +1,247 @@
++import { cookies } from "next/headers";
++
++export const dynamic = "force-dynamic";
++export const revalidate = 0;
++
++export const metadata = {
++  title: "REEF Launch Intelligence · Temporary Audit",
++  robots: { index: false, follow: false },
++};
++
++type ApiResult = {
++  ok: boolean;
++  status: number;
++  data: unknown;
++};
++
++function object(value: unknown): Record<string, unknown> {
++  return value && typeof value === "object" && !Array.isArray(value)
++    ? (value as Record<string, unknown>)
++    : {};
++}
++
++function rows(value: unknown): Array<Record<string, unknown>> {
++  return Array.isArray(value)
++    ? value.filter((item) => item && typeof item === "object") as Array<Record<string, unknown>>
++    : [];
++}
++
++function value(value: unknown, fallback = "—") {
++  if (value === null || value === undefined || value === "") return fallback;
++  return String(value);
++}
++
++function money(cents: unknown) {
++  const n = typeof cents === "number" ? cents : Number(cents);
++  return Number.isFinite(n)
++    ? new Intl.NumberFormat("en-GB", { style: "currency", currency: "EUR" }).format(n / 100)
++    : "—";
++}
++
++function JsonBlock({ data }: { data: unknown }) {
++  return (
++    <pre style={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere", fontSize: 12, lineHeight: 1.5 }}>
++      {JSON.stringify(data, null, 2)}
++    </pre>
++  );
++}
++
++function Section({ title, result }: { title: string; result: ApiResult }) {
++  return (
++    <section style={{ border: "1px solid #d7dee7", borderRadius: 12, padding: 18, marginTop: 18 }}>
++      <div style={{ display: "flex", justifyContent: "space-between", gap: 16, alignItems: "baseline" }}>
++        <h2 style={{ margin: 0, fontSize: 20 }}>{title}</h2>
++        <strong>{result.ok ? `HTTP ${result.status}` : `ERROR ${result.status || "NETWORK"}`}</strong>
++      </div>
++      <JsonBlock data={result.data} />
++    </section>
++  );
++}
++
++export default async function AuditPage() {
++  const apiBase = process.env.API_BASE_URL ?? "http://127.0.0.1:8010";
++  const appOrigin = process.env.APP_ORIGIN ?? "http://127.0.0.1:3010";
++  const cookieHeader = (await cookies()).toString();
++
++  async function call(path: string, init: RequestInit = {}): Promise<ApiResult> {
++    try {
++      const method = (init.method ?? "GET").toUpperCase();
++      const headers = new Headers(init.headers);
++      headers.set("Accept", "application/json");
++      if (cookieHeader) headers.set("Cookie", cookieHeader);
++      if (!["GET", "HEAD", "OPTIONS"].includes(method)) {
++        headers.set("Content-Type", "application/json");
++        headers.set("Origin", appOrigin);
++      }
++      const response = await fetch(`${apiBase}/v1${path}`, {
++        ...init,
++        headers,
++        cache: "no-store",
++      });
++      const text = await response.text();
++      let data: unknown = text;
++      try {
++        data = text ? JSON.parse(text) : null;
++      } catch {
++        // Keep non-JSON response as text so the audit page still exposes the failure.
++      }
++      return { ok: response.ok, status: response.status, data };
++    } catch (error) {
++      return {
++        ok: false,
++        status: 0,
++        data: { error: error instanceof Error ? error.message : String(error) },
++      };
++    }
++  }
++
++  const [dashboard, geography, campaigns, creatives, integrations, dailyReport, budgetReport, campaignReport, learningsReport] = await Promise.all([
++    call("/dashboard"),
++    call("/geography"),
++    call("/campaigns"),
++    call("/creatives"),
++    call("/integrations"),
++    call("/reports/daily"),
++    call("/reports/budget"),
++    call("/reports/campaigns"),
++    call("/reports/learnings"),
++  ]);
++
++  const dash = object(dashboard.data);
++  const rules = object(dash.rules);
++  const scenario = await call("/scenarios", {
++    method: "POST",
++    body: JSON.stringify({
++      ticket_price_cents: Number(rules.baseline_ticket_price_cents ?? 650),
++      advertising_budget_cents: 50000,
++      ad_incremental_cpa_cents: rules.ad_incremental_cpa_cents ?? null,
++      attendance_target_pct: Number(rules.attendance_target_pct ?? 80),
++    }),
++  });
++
++  const screeningRows = rows(dash.screenings);
++  const salesIntel = object(dash.sales_intelligence);
++  const portfolio = object(salesIntel.portfolio);
++  const scenarioData = object(scenario.data);
++  const scenarioPortfolio = object(scenarioData.portfolio);
++  const marketingPlan = object(scenarioData.marketing_plan);
++  const geographyRows = rows(marketingPlan.geographies);
++  const screeningPlanRows = rows(marketingPlan.screenings);
++  const channelRows = rows(marketingPlan.channels);
++  const audienceRows = rows(marketingPlan.audiences);
++
++  return (
++    <main style={{ maxWidth: 1240, margin: "0 auto", padding: "32px 20px 80px", fontFamily: "Arial, sans-serif", color: "#15283b" }}>
++      <header>
++        <p style={{ margin: 0, fontSize: 12, textTransform: "uppercase", letterSpacing: 1.4 }}>Temporary read-only diagnostic page</p>
++        <h1 style={{ margin: "8px 0 8px", fontSize: 34 }}>REEF Launch Intelligence · Audit</h1>
++        <p style={{ maxWidth: 850, lineHeight: 1.6 }}>
++          This page aggregates the current dashboard, sales forecast, scenario engine, dynamic marketing plan,
++          geography, campaign evidence, integrations and management reports into one server-rendered page.
++          Remove this route after the review and close the public tunnel.
++        </p>
++        <p><strong>Generated:</strong> {new Date().toISOString()}</p>
++      </header>
++
++      <section style={{ border: "2px solid #153b59", borderRadius: 14, padding: 20, marginTop: 24 }}>
++        <h2 style={{ marginTop: 0 }}>Executive prediction snapshot</h2>
++        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(180px,1fr))", gap: 14 }}>
++          <div><strong>Expected final tickets</strong><div>{value(portfolio.final_base)}</div></div>
++          <div><strong>Forecast range</strong><div>{value(portfolio.final_low)}–{value(portfolio.final_high)}</div></div>
++          <div><strong>Expected occupancy</strong><div>{value(portfolio.final_occupancy_pct)}%</div></div>
++          <div><strong>Next 7 days</strong><div>+{value(portfolio.expected_new_tickets_7d, "0")}</div></div>
++          <div><strong>Scenario gross revenue</strong><div>{money(scenarioPortfolio.gross_revenue_cents)}</div></div>
++          <div><strong>Scenario budget</strong><div>{money(scenarioData.advertising_budget_cents)}</div></div>
++        </div>
++      </section>
++
++      <section style={{ border: "1px solid #d7dee7", borderRadius: 12, padding: 18, marginTop: 18 }}>
++        <h2 style={{ marginTop: 0 }}>Six-screening sales forecast</h2>
++        <div style={{ overflowX: "auto" }}>
++          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
++            <thead><tr><th align="left">Date</th><th>Observed</th><th>Capacity</th><th>Low</th><th>Base</th><th>High</th><th>Confidence</th></tr></thead>
++            <tbody>
++              {screeningRows.map((screening) => {
++                const forecast = object(screening.forecast);
++                return <tr key={value(screening.id)}>
++                  <td>{value(screening.date)}</td>
++                  <td align="center">{value(screening.tickets_sold)}</td>
++                  <td align="center">{value(screening.capacity)}</td>
++                  <td align="center">{value(forecast.low)}</td>
++                  <td align="center"><strong>{value(forecast.base)}</strong></td>
++                  <td align="center">{value(forecast.high)}</td>
++                  <td align="center">{value(forecast.confidence)}</td>
++                </tr>;
++              })}
++            </tbody>
++          </table>
++        </div>
++      </section>
++
++      <section style={{ border: "1px solid #d7dee7", borderRadius: 12, padding: 18, marginTop: 18 }}>
++        <h2 style={{ marginTop: 0 }}>Dynamic marketing recommendation · €500 scenario</h2>
++        <p><strong>Recommendation:</strong> {value(marketingPlan.recommendation)}</p>
++        <p><strong>Evidence classification:</strong> {value(marketingPlan.classification)}</p>
++
++        <h3>Geography ranking</h3>
++        <JsonBlock data={geographyRows} />
++        <h3>Screening priority and budget allocation</h3>
++        <JsonBlock data={screeningPlanRows} />
++        <h3>Channel ranking</h3>
++        <JsonBlock data={channelRows} />
++        <h3>Audience hypotheses/evidence</h3>
++        <JsonBlock data={audienceRows} />
++      </section>
++
++      <Section title="Dashboard · full current state" result={dashboard} />
++      <Section title="Scenario engine · baseline price + €500 analytical budget" result={scenario} />
++      <Section title="Geography · observed campaign performance by zone" result={geography} />
++      <Section title="Campaigns" result={campaigns} />
++      <Section title="Creatives" result={creatives} />
++      <Section title="Integrations / data availability" result={integrations} />
++      <Section title="Report · daily / screening forecast" result={dailyReport} />
++      <Section title="Report · budget" result={budgetReport} />
++      <Section title="Report · campaigns" result={campaignReport} />
++      <Section title="Report · learnings" result={learningsReport} />
++    </main>
++  );
++}
