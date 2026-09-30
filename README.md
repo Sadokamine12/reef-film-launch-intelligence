@@ -82,3 +82,7 @@ For an Internet deployment set `ENVIRONMENT=production`, disable `DEV_AUTH_BYPAS
 See `docs/LOCAL_HANDOFF.md` for the latest verification results and remaining work. Baseline forecasts use a transparent small-data ridge model with grouped leave-one-event-out validation and bootstrap planning ranges. Archived unavailable inventory is a demand proxy, not verified final attendance. Price elasticity and advertising response remain explicit planning assumptions unless future evidence supports empirical estimates; attributed tickets are not proven incremental lift.
 
 The original repository was only read for historical data and was not modified. This ZIP is the new application's source, without dependencies, runtime databases, credentials or Git history.
+
+### Evidence-aware sales and geography intelligence
+
+The local decision workspace now includes a sales-intelligence layer and a dynamic marketing ranking. Final demand is forecast for each screening, near-term 7/14-day selling is updated from live pace when observations exist, and the scenario engine ranks which screening and geography should receive a selected test budget. Geography ranking uses imported campaign response when available and otherwise falls back to an explicitly labelled travel-friction planning prior. It never treats attributed tickets as causal lift or invents advertising conversions when CPA evidence is missing.

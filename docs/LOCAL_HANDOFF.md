@@ -44,3 +44,16 @@ node scripts/with-local-db.mjs node node_modules/@playwright/test/cli.js test
 ```
 
 Stop START_LOCAL before E2E tests, since the test services use the same ports. E2E uses an isolated temporary database. Never point tests at production.
+
+## Phase 4 — Sales + Marketing Intelligence
+
+The decision layer now goes beyond fixed geography rules:
+
+- `dashboard.sales_intelligence` exposes expected final tickets, next-7/14-day ticket outlook, forecast risk, pace trend, and a per-screening priority score.
+- `/v1/scenarios` now also returns `marketing_plan` with dynamic screening, geography, channel, and audience rankings for the selected budget.
+- Geography ranking can change when imported campaign evidence changes. Distance is only a travel-friction prior when conversion evidence is absent.
+- Attributed campaign tickets are treated as a signal, not proof of causal advertising lift.
+- If no incremental CPA is configured, the application can rank test locations and allocate a planning budget but does not invent additional ticket sales.
+- Ticket Sales now shows a forecast trajectory and expected new tickets over the next 7/14 days.
+
+After applying this phase, run the existing backend suite, `npm.cmd run typecheck`, `npm.cmd test`, and `npm.cmd run build` before committing.

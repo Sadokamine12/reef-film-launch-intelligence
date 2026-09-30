@@ -6,6 +6,7 @@ from pydantic import ValidationError
 from reef.forecasting.engine import BookingCurveForecast, ForecastInput, curve_target, sales_velocity
 from reef.forecasting.historical import HistoricalRidgeModel
 from reef.integrations.adapters import parse_campaign_csv
+from reef.intelligence.engine import build_sales_intelligence
 from reef.marketing.decisions import decide
 from reef.schemas import Rules, SnapshotInput
 
@@ -185,3 +186,52 @@ def test_historical_model_groups_repeated_snapshots_by_event():
     assert forecast is not None
     assert 0 <= forecast["low"] <= forecast["base"] <= forecast["high"] <= 109
     assert forecast["confidence"] == "LOW"
+
+
+def test_sales_intelligence_projects_near_term_and_final_from_live_pace():
+    rules = Rules(attendance_target_pct=80)
+    rows = [{
+        "id": "show-a",
+        "date": "2027-02-10",
+        "capacity": 109,
+        "days_until": 14,
+        "tickets_sold": 40,
+        "sales_open_confirmed": True,
+        "sales_open_date": "2026-11-16",
+        "stale": False,
+        "velocity_3": 2.5,
+        "velocity_7": 2.0,
+        "forecast": {"low": 60, "base": 75, "high": 90, "confidence": "MEDIUM"},
+    }]
+    intel = build_sales_intelligence(rows, rules, date(2027, 1, 27))
+    row = intel["screenings"][0]
+    assert row["final_base"] == 75
+    assert row["expected_new_tickets_7d"] > 0
+    assert row["expected_cumulative_7d"] >= 40
+    assert row["expected_cumulative_14d"] == 75
+    assert row["trajectory"][-1]["days"] == 0
+    assert row["trajectory"][-1]["base"] == 75
+    assert 0 <= row["priority_score"] <= 100
+
+
+def test_presales_sales_intelligence_keeps_near_term_zero_without_opening_evidence():
+    rules = Rules()
+    rows = [{
+        "id": "show-a",
+        "date": "2027-02-10",
+        "capacity": 109,
+        "days_until": 100,
+        "tickets_sold": None,
+        "sales_open_confirmed": False,
+        "sales_open_date": "2026-11-16",
+        "stale": False,
+        "velocity_3": None,
+        "velocity_7": None,
+        "forecast": {"low": 30, "base": 50, "high": 70, "confidence": "LOW"},
+    }]
+    intel = build_sales_intelligence(rows, rules, date(2026, 11, 2))
+    row = intel["screenings"][0]
+    assert row["expected_new_tickets_7d"] == 0
+    assert row["expected_new_tickets_14d"] == 0
+    assert row["final_base"] == 50
+    assert row["trajectory"][-1]["base"] == 50

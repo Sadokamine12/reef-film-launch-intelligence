@@ -4,6 +4,7 @@ from zoneinfo import ZoneInfo
 from reef.campaigns.service import budget
 from reef.forecasting.engine import BookingCurveForecast, ForecastInput, sales_velocity
 from reef.forecasting.historical import HistoricalRidgeModel
+from reef.intelligence.engine import build_sales_intelligence
 from reef.marketing.decisions import decide
 from reef.models import Campaign, HistoricalSnapshot, Project, Screening, Snapshot
 from reef.schemas import Rules
@@ -146,6 +147,7 @@ def dashboard(db: Session, project: Project, as_of: datetime | None = None) -> d
         ),
     )
     first = actionable[0]
+    sales_intelligence = build_sales_intelligence(rows, rules, today)
     if all(r["decision"]["status"] == "PRE_LAUNCH" for r in rows):
         headline = "Spend €0 today. Prepare the ticket-sales launch."
     elif first["decision"]["status"] in {"ACTION", "WATCH"}:
@@ -184,5 +186,6 @@ def dashboard(db: Session, project: Project, as_of: datetime | None = None) -> d
         "curve": [p.model_dump() for p in rules.curve],
         "rules": rules.model_dump(mode="json"),
         "forecast_model": historical_model.metadata(),
+        "sales_intelligence": sales_intelligence,
         "revision": project.revision,
     }

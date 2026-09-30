@@ -17,6 +17,7 @@ from reef.config import settings
 from reef.db import session
 from reef.forecasting.scenarios import scenario_analysis
 from reef.integrations.adapters import parse_campaign_csv
+from reef.intelligence.engine import build_marketing_plan
 from reef.models import (
     AuditEvent,
     Campaign,
@@ -199,7 +200,11 @@ def scenarios(payload: ScenarioInput, db: Session = Depends(session), user: User
     p = project(db)
     rules = Rules.model_validate(p.rules)
     try:
-        return scenario_analysis(dashboard(db, p), payload, rules)
+        dash = dashboard(db, p)
+        result = scenario_analysis(dash, payload, rules)
+        result["sales_intelligence"] = dash.get("sales_intelligence")
+        result["marketing_plan"] = build_marketing_plan(db, p.id, dash, result, rules)
+        return result
     except KeyError as exc:
         raise HTTPException(404, f"Unknown screening: {exc.args[0]}") from exc
     except ValueError as exc:

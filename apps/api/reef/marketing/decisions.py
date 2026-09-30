@@ -24,7 +24,7 @@ def decide(
         "daily_budget_cents": 0,
         "duration_days": rules.campaign_days,
         "channel": "Owned / organic / partners",
-        "geography": "Zone A + B · Garching / North Munich",
+        "geography": "Dynamic ranking · see Geography Intelligence",
         "creative": "Creative B — Event",
         "next_review": str(as_of + timedelta(days=1)),
         "action": "Confirm booking links, tracking and the two creative concepts.",
@@ -76,7 +76,7 @@ def decide(
         "daily_budget_cents": daily,
         "recommended_budget_cents": daily * duration,
         "duration_days": duration,
-        "channel": "Meta / Instagram / Facebook",
+        "channel": "Evidence-ranked channel test",
         "action": f"Run a {duration}-day {'local test' if status == 'WATCH' else 'recovery campaign'} using Creative B.",
         "next_review": str(as_of + timedelta(days=duration)),
     }

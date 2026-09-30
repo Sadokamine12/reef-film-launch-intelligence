@@ -331,3 +331,43 @@ def test_provisional_reef_contribution_requires_complete_economics(client):
 def test_scenario_rejects_unknown_screening(client):
     r = client.post("/v1/scenarios", json={"screening_ids": ["missing"]})
     assert r.status_code == 404
+
+
+def test_scenario_includes_dynamic_marketing_and_sales_intelligence(client):
+    data = client.post("/v1/scenarios", json={"advertising_budget_cents": 10000}).json()
+    assert data["sales_intelligence"]["portfolio"]["final_base"] > 0
+    plan = data["marketing_plan"]
+    assert len(plan["geographies"]) == 3
+    assert [row["rank"] for row in plan["geographies"]] == [1, 2, 3]
+    assert sum(row["recommended_budget_cents"] for row in plan["geographies"]) == 10000
+    assert all(row["expected_incremental_tickets"] is None for row in plan["geographies"])
+    assert len(plan["screenings"]) == 6
+    assert sum(row["recommended_budget_cents"] for row in plan["screenings"]) == 10000
+
+
+def test_geography_ranking_can_change_when_observed_response_arrives(client):
+    before = client.post("/v1/scenarios", json={"advertising_budget_cents": 10000}).json()
+    assert before["marketing_plan"]["geographies"][0]["id"] == "zone-a"
+    key = make_campaign(client, geography_id="zone-c", budget_cents=1000)
+    raw = f"date,spend_eur,impressions,clicks,attributed_tickets\n{date.today()},1.00,1000,80,10"
+    imported = client.post(
+        "/v1/imports/campaigns",
+        data={"campaign_id": key, "provider": "META", "preview": "false", "replace": "false"},
+        files={"file": ("zone-c.csv", raw, "text/csv")},
+    )
+    assert imported.status_code == 200, imported.text
+    after = client.post("/v1/scenarios", json={"advertising_budget_cents": 10000}).json()
+    assert after["marketing_plan"]["geographies"][0]["id"] == "zone-c"
+    assert after["marketing_plan"]["geographies"][0]["classification"] == "MODEL ESTIMATE"
+
+
+def test_planning_cpa_distributes_modeled_increment_without_inventing_extra_total(client):
+    data = client.post(
+        "/v1/scenarios",
+        json={"advertising_budget_cents": 50000, "ad_incremental_cpa_cents": 2500},
+    ).json()
+    scenario_increment = sum(row["ad_increment_base"] for row in data["screenings"])
+    geography_increment = sum(
+        row["expected_incremental_tickets"] or 0 for row in data["marketing_plan"]["geographies"]
+    )
+    assert geography_increment == scenario_increment
