@@ -1,7 +1,8 @@
-from reef import models  # noqa: F401 - registers all migration tables
 """Initial REEF Launch Intelligence schema."""
 
 from alembic import op
+
+from reef import models  # noqa: F401 - registers all migration tables
 from reef.db import Base
 
 revision = "0001"
