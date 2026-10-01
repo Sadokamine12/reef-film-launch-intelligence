@@ -8,7 +8,7 @@ New Next.js + FastAPI application for Resolution at ESO Supernova. Standard Post
 2. Extract the whole ZIP into a normal writable folder (do not run it inside the ZIP).
 3. Double-click **SETUP_LOCAL.cmd**. The first setup downloads dependencies and builds the frontend. Internet is required.
 4. When setup finishes, double-click **START_LOCAL.cmd**.
-5. Open **http://localhost:3000**. Keep the terminal open.
+5. Open **http://127.0.0.1:3010**. Keep the terminal open.
 
 If you have Python 3.13+ instead of 3.12, open a terminal in the folder and run `python scripts/setup-local.py` (or `py -3.13 scripts/setup-local.py`). Then run START_LOCAL.cmd.
 
@@ -22,18 +22,18 @@ bash SETUP_LOCAL.sh
 bash START_LOCAL.sh
 ```
 
-Open **http://localhost:3000**. Stop with Ctrl+C.
+Open **http://127.0.0.1:3010**. Stop with Ctrl+C.
 
 ## What local mode does
 
-- Starts a persistent **PGlite development database** (a PostgreSQL WASM build), FastAPI on port 8000 and Next.js on port 3000.
+- Starts a persistent **PGlite development database** (a PostgreSQL WASM build), FastAPI on port 8010 and Next.js on port 3010.
 - Binds the services to 127.0.0.1. This is for testing on your own computer.
 - Enables an explicitly labeled local sign-in bypass. No password is required in this mode.
 - Keeps your observations, campaigns and settings in `.local/local-test-database`; closing the terminal does not erase them.
 - Does not launch ads, connect to Meta/Google APIs or scrape ESO automatically.
 - Does not require Docker or a PostgreSQL installation for the quick local test.
 
-**Use exactly http://localhost:3000 for the local launcher.** A different origin may be rejected when saving. If ports 3000, 8000 or 55432 are occupied, close the other program first.
+**Use exactly http://127.0.0.1:3010 for the local launcher.** A different origin may be rejected when saving. If ports 3010, 8010 or 55432 are occupied, close the other program first.
 
 ## Test the workflows
 
@@ -81,7 +81,7 @@ For an Internet deployment set `ENVIRONMENT=production`, disable `DEV_AUTH_BYPAS
 
 See `docs/LOCAL_HANDOFF.md` for the latest verification results and remaining work. Baseline forecasts use a transparent small-data ridge model with grouped leave-one-event-out validation and bootstrap planning ranges. Archived unavailable inventory is a demand proxy, not verified final attendance. Price elasticity and advertising response remain explicit planning assumptions unless future evidence supports empirical estimates; attributed tickets are not proven incremental lift.
 
-The original repository was only read for historical data and was not modified. This ZIP is the new application's source, without dependencies, runtime databases, credentials or Git history.
+The current Next.js/FastAPI application is maintained in this repository. The legacy Streamlit implementation is preserved on the `legacy-streamlit` branch. Dependencies, runtime databases and credentials are not committed.
 
 ### Evidence-aware sales and geography intelligence
 
