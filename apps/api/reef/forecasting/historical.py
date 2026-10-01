@@ -14,7 +14,6 @@ from random import Random
 from statistics import mean
 from typing import Iterable
 
-
 RIDGE_LAMBDA = 10.0
 BOOTSTRAP_SAMPLES = 200
 BOOTSTRAP_SEED = 202702
