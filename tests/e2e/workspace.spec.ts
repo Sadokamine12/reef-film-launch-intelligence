@@ -1,5 +1,5 @@
 import {test,expect} from '@playwright/test';
-const routes=[['Ticket Sales','/ticket-sales','Every screening has its own curve'],['Forecast & Scenarios','/scenarios','Resolution decision lab'],['Marketing','/marketing','Put the money where it is needed'],['Geography','/geography','Start close. Expand with evidence.'],['Campaigns','/campaigns','Plan, measure, then decide'],['Creatives','/creatives','Two ideas. One ticket decision.'],['Reports','/reports','The numbers. The decision. The next step.'],['Settings','/settings','A clear source of truth']] as const;
+const routes=[['Ticket Sales','/ticket-sales','Forecast the finish, not just today'],['Forecast & Scenarios','/scenarios','Resolution decision lab'],['Marketing','/marketing','Separate what-if allocation from spend today'],['Geography','/geography','Market-test priority that learns from evidence'],['Campaigns','/campaigns','Plan, measure, then decide'],['Creatives','/creatives','Two ideas. One ticket decision.'],['Reports','/reports','The numbers. The decision. The next step.'],['Settings','/settings','A clear source of truth']] as const;
 test('honest seeded command center and all navigation routes',async({page})=>{
  await page.goto('/');await expect(page.getByRole('heading',{name:'Ticket Sales Command Center'})).toBeVisible();
  await expect(page.getByText('WHAT SHOULD WE DO TODAY?')).toBeVisible();
@@ -36,5 +36,5 @@ test('business rule changes persist and invalid ceilings are rejected',async({pa
 test('mobile navigation stays usable without horizontal overflow',async({page})=>{
  await page.setViewportSize({width:390,height:844});await page.goto('/');await expect(page.getByRole('heading',{name:'Ticket Sales Command Center'})).toBeVisible();
  await expect.poll(()=>page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth)).toBeTruthy();
- await page.getByRole('button',{name:'Open navigation'}).click();await page.getByRole('navigation').getByRole('link',{name:'Geography',exact:true}).click();await expect(page.getByRole('heading',{name:'Start close. Expand with evidence.'})).toBeVisible();await page.screenshot({path:'test-results/geography-mobile.png',fullPage:true});
+ await page.getByRole('button',{name:'Open navigation'}).click();await page.getByRole('navigation').getByRole('link',{name:'Geography',exact:true}).click();await expect(page.getByRole('heading',{name:'Market-test priority that learns from evidence'})).toBeVisible();await page.screenshot({path:'test-results/geography-mobile.png',fullPage:true});
 });
