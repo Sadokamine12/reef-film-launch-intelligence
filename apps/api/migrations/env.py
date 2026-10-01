@@ -1,5 +1,5 @@
-from reef import models  # noqa: F401 - registers all migration tables
 from alembic import context
+from reef import models  # noqa: F401 - registers all migration tables
 from reef.db import Base, engine
 
 with engine().connect() as connection:
