@@ -128,6 +128,22 @@ class ScreeningUpdate(StrictModel):
         return value
 
 
+class TrafficMetricInput(StrictModel):
+    date: date
+    geography_id: str
+    sessions: int = Field(ge=0)
+    ticket_clicks: int = Field(default=0, ge=0)
+    source: str = Field(default="MANUAL", min_length=2, max_length=30)
+
+    @field_validator("date")
+    @classmethod
+    def traffic_not_future(cls, value):
+        if value > date.today():
+            raise ValueError("Future website traffic is not allowed")
+        return value
+
+
+
 class CampaignInput(StrictModel):
     name: str = Field(min_length=2, max_length=150)
     platform: Literal["META", "GOOGLE"]

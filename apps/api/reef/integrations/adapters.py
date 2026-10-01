@@ -8,7 +8,7 @@ import io
 from decimal import Decimal, InvalidOperation
 from typing import Protocol
 
-from reef.schemas import MetricInput
+from reef.schemas import MetricInput, TrafficMetricInput
 
 
 class SourceAdapter(Protocol):
@@ -97,6 +97,92 @@ def parse_campaign_csv(content: bytes, platform: str) -> list[MetricInput]:
             dates.add(row.date)
             rows.append(row)
         except (ValueError, InvalidOperation) as exc:
+            raise ValueError(f"Row {index}: {exc}") from None
+    if not rows:
+        raise ValueError("CSV contains no data rows")
+    return rows
+
+
+def parse_traffic_csv(content: bytes) -> list[TrafficMetricInput]:
+    """Parse a simple location-level analytics export.
+
+    Required columns: date, geography_id, sessions. Optional: ticket_clicks, source.
+    Geography IDs must match the project's configured candidate markets.
+    """
+    if len(content) > 2_000_000:
+        raise ValueError("CSV exceeds 2 MB")
+    try:
+        text = content.decode("utf-8-sig")
+    except UnicodeDecodeError:
+        raise ValueError("Save the export as UTF-8 CSV") from None
+    reader = csv.DictReader(io.StringIO(text))
+    fields = set(reader.fieldnames or [])
+    required = {"date", "geography_id", "sessions"}
+    if not required.issubset(fields):
+        raise ValueError("Missing columns: date, geography_id, sessions are required")
+    rows: list[TrafficMetricInput] = []
+    seen: set[tuple[str, str, str]] = set()
+    for index, raw in enumerate(reader, 2):
+        if len(rows) >= 5000:
+            raise ValueError("Maximum 5,000 rows per import")
+        if not any(raw.values()):
+            continue
+        try:
+            source = (raw.get("source") or "MANUAL").strip().upper()[:30]
+            row = TrafficMetricInput(
+                date=(raw.get("date") or "").strip(),
+                geography_id=(raw.get("geography_id") or "").strip(),
+                sessions=int((raw.get("sessions") or "0").strip()),
+                ticket_clicks=int((raw.get("ticket_clicks") or "0").strip()),
+                source=source,
+            )
+            key = (str(row.date), row.geography_id, row.source)
+            if key in seen:
+                raise ValueError("Duplicate date/geography/source row")
+            seen.add(key)
+            rows.append(row)
+        except ValueError as exc:
+            raise ValueError(f"Row {index}: {exc}") from None
+    if not rows:
+        raise ValueError("CSV contains no data rows")
+    return rows
+
+
+def parse_ticket_sales_csv(content: bytes):
+    """Parse cumulative Resolution ticket snapshots for batch/collector ingestion."""
+    from reef.schemas import SnapshotInput
+
+    if len(content) > 2_000_000:
+        raise ValueError("CSV exceeds 2 MB")
+    try:
+        text = content.decode("utf-8-sig")
+    except UnicodeDecodeError:
+        raise ValueError("Save the export as UTF-8 CSV") from None
+    reader = csv.DictReader(io.StringIO(text))
+    fields = set(reader.fieldnames or [])
+    required = {"screening_id", "observed_at", "tickets_sold"}
+    if not required.issubset(fields):
+        raise ValueError("Missing columns: screening_id, observed_at, tickets_sold are required")
+    rows = []
+    seen = set()
+    for index, raw in enumerate(reader, 2):
+        if len(rows) >= 5000:
+            raise ValueError("Maximum 5,000 rows per import")
+        if not any(raw.values()):
+            continue
+        try:
+            row = SnapshotInput(
+                screening_id=(raw.get("screening_id") or "").strip(),
+                observed_at=(raw.get("observed_at") or "").strip(),
+                tickets_sold=int((raw.get("tickets_sold") or "0").strip()),
+                note=(raw.get("note") or "").strip(),
+            )
+            key = (row.screening_id, row.observed_at.isoformat())
+            if key in seen:
+                raise ValueError("Duplicate screening/timestamp row")
+            seen.add(key)
+            rows.append(row)
+        except ValueError as exc:
             raise ValueError(f"Row {index}: {exc}") from None
     if not rows:
         raise ValueError("CSV contains no data rows")

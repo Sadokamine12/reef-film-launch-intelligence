@@ -35,11 +35,13 @@ def report(db: Session, kind: str, dashboard: dict) -> dict:
                 "source": s["source_label"],
                 "observed_at": s["observed_at"],
                 "recommended_eur": s["decision"]["recommended_budget_cents"] / 100,
+                "forecast_risk": next((x["forecast_risk"] for x in dashboard.get("sales_intelligence", {}).get("screenings", []) if x["screening_id"] == s["id"]), None),
+                "action_urgency": next((x["action_urgency"] for x in dashboard.get("sales_intelligence", {}).get("screenings", []) if x["screening_id"] == s["id"]), None),
             }
             for s in screenings
         ]
         notes.append(
-            "Targets are management assumptions. Forecast ranges are heuristic estimates, not calibrated intervals."
+            "Targets are management assumptions. Forecast ranges come from the grouped historical ridge baseline and live Resolution pace when available; they are planning ranges, not calibrated prediction intervals."
         )
         if kind == "post-event":
             notes.append(

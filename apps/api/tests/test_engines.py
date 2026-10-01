@@ -5,7 +5,7 @@ import pytest
 from pydantic import ValidationError
 from reef.forecasting.engine import BookingCurveForecast, ForecastInput, curve_target, sales_velocity
 from reef.forecasting.historical import HistoricalRidgeModel
-from reef.integrations.adapters import parse_campaign_csv
+from reef.integrations.adapters import parse_campaign_csv, parse_ticket_sales_csv, parse_traffic_csv
 from reef.intelligence.engine import build_sales_intelligence
 from reef.marketing.decisions import decide
 from reef.schemas import Rules, SnapshotInput
@@ -214,7 +214,7 @@ def test_sales_intelligence_projects_near_term_and_final_from_live_pace():
     assert 0 <= row["priority_score"] <= 100
 
 
-def test_presales_sales_intelligence_keeps_near_term_zero_without_opening_evidence():
+def test_presales_sales_intelligence_marks_near_term_not_applicable_without_opening_evidence():
     rules = Rules()
     rows = [{
         "id": "show-a",
@@ -231,7 +231,34 @@ def test_presales_sales_intelligence_keeps_near_term_zero_without_opening_eviden
     }]
     intel = build_sales_intelligence(rows, rules, date(2026, 11, 2))
     row = intel["screenings"][0]
-    assert row["expected_new_tickets_7d"] == 0
-    assert row["expected_new_tickets_14d"] == 0
+    assert row["expected_new_tickets_7d"] is None
+    assert row["expected_new_tickets_14d"] is None
+    assert row["sales_state"] == "PRE_SALES"
+    assert row["forecast_risk"] == "HIGH"
+    assert row["action_urgency"] == "NONE"
+    assert row["action_urgency_score"] == 0
     assert row["final_base"] == 50
-    assert row["trajectory"][-1]["base"] == 50
+    assert row["trajectory"][-1]["base"] is None
+
+
+def test_ticket_snapshot_csv_requires_timezone_and_parses_rows():
+    stamp = (datetime.now(timezone.utc) - timedelta(minutes=1)).isoformat()
+    rows = parse_ticket_sales_csv(
+        f"screening_id,observed_at,tickets_sold,note\nshow-a,{stamp},4,\n".encode()
+    )
+    assert rows[0].screening_id == "show-a"
+    assert rows[0].tickets_sold == 4
+    naive = (datetime.now() - timedelta(minutes=1)).replace(microsecond=0).isoformat()
+    with pytest.raises(ValueError):
+        parse_ticket_sales_csv(
+            f"screening_id,observed_at,tickets_sold\nshow-a,{naive},4\n".encode()
+        )
+
+
+def test_location_traffic_csv_parser():
+    rows = parse_traffic_csv(
+        b"date,geography_id,sessions,ticket_clicks,source\n2026-09-30,zone-a,100,12,ANALYTICS\n"
+    )
+    assert rows[0].sessions == 100
+    assert rows[0].ticket_clicks == 12
+    assert rows[0].source == "ANALYTICS"

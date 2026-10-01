@@ -86,3 +86,7 @@ The original repository was only read for historical data and was not modified. 
 ### Evidence-aware sales and geography intelligence
 
 The local decision workspace now includes a sales-intelligence layer and a dynamic marketing ranking. Final demand is forecast for each screening, near-term 7/14-day selling is updated from live pace when observations exist, and the scenario engine ranks which screening and geography should receive a selected test budget. Geography ranking uses imported campaign response when available and otherwise falls back to an explicitly labelled travel-friction planning prior. It never treats attributed tickets as causal lift or invents advertising conversions when CPA evidence is missing.
+
+### Phase 5 decision semantics and evidence ingestion
+
+The workspace now separates **forecast risk** from **action urgency**. A screening can have high pre-sales demand risk while the correct current action remains €0 paid spend because tickets are not yet open. Scenario budget allocations are explicitly what-if plans, not spend instructions. Geography output is a **market-test priority** until campaign or website evidence exists. Location-level traffic (`sessions`, `ticket_clicks`) and batch ticket snapshots can be imported by CSV, and those observations update the ranking/velocity layers. Price decisions now run an elasticity sensitivity check; an apparent revenue-leading price is not called robust unless it survives the tested assumption range and clears the current forecast-uncertainty threshold.

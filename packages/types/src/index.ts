@@ -13,7 +13,8 @@ export interface Dashboard {as_of:string;project:Project;summary:{capacity:numbe
 export interface Performance {spend_cents:number;impressions:number;clicks:number;landing_page_views:number|null;attributed_tickets:number|null;ctr:number|null;landing_page_response:number|null;cost_per_ticket_cents:number|null;observations:number;source_label?:SourceLabel;last_imported_at?:string|null}
 export interface Campaign {id:string;name:string;platform:'META'|'GOOGLE';ad_set:string;geography_id:string;audience:string;creative_id:string;screening_id:string;start_date:string;end_date:string;budget_cents:number;status:string;external_id:string|null;metrics:Performance}
 export interface Creative {id:string;name:string;concept:string;headline:string;body:string;asset_url:string|null;status:'DRAFT'|'READY'|'RETIRED';performance:Performance}
-export interface Geography {id:string;name:string;min_km:number;max_km:number;priority:string;notes:string;performance:Performance}
+export interface TrafficPerformance {sessions:number;ticket_clicks:number;ticket_click_rate:number|null;observations:number;source_label:SourceLabel;last_imported_at:string|null}
+export interface Geography {id:string;name:string;min_km:number;max_km:number;priority:string;notes:string;performance:Performance;traffic?:TrafficPerformance}
 export interface Report {kind:string;title:string;generated_at:string;project:Project;rows:Record<string,string|number|null>[];notes:string[];recommendation:string}
 export interface Historical {id:string;programme:string;show_date:string;observed_at:string;days_before:number;unavailable_seats:number;capacity:number;source_url:string}
 export interface Integration {provider:string;status:string;label:SourceLabel;last_sync:string|null;detail:string}
@@ -40,24 +41,28 @@ export interface ScenarioLadderRow {ticket_price_cents:number;tickets_base:numbe
 export interface BudgetLadderRow {advertising_budget_cents:number;tickets_base:number;occupancy_base_pct:number;gross_revenue_base_cents:number}
 export interface ScenarioEvidenceItem {classification:SourceLabel;[key:string]:unknown}
 
-export interface SalesTrajectoryPoint {days:number;low:number;base:number;high:number}
+export interface SalesTrajectoryPoint {days:number;low:number|null;base:number|null;high:number|null}
 export interface SalesIntelligenceScreening {
-  screening_id:string;date:string;capacity:number;observed_tickets:number|null;current_reference_tickets:number;
-  expected_new_tickets_7d:number;expected_new_tickets_14d:number;expected_cumulative_7d:number;expected_cumulative_14d:number;
+  screening_id:string;date:string;capacity:number;sales_state:'PRE_SALES'|'LIVE'|'COMPLETE';observed_tickets:number|null;current_reference_tickets:number|null;
+  expected_new_tickets_7d:number|null;expected_new_tickets_14d:number|null;expected_cumulative_7d:number|null;expected_cumulative_14d:number|null;
   final_low:number|null;final_base:number;final_high:number|null;final_occupancy_pct:number;target_tickets:number;forecast_shortfall:number;
-  risk:'LOW'|'MEDIUM'|'HIGH';priority_score:number;pace_trend:string;classification:SourceLabel;confidence:string;action:string;trajectory:SalesTrajectoryPoint[];
+  risk:'LOW'|'MEDIUM'|'HIGH';forecast_risk:'LOW'|'MEDIUM'|'HIGH';forecast_risk_score:number;action_urgency:string;action_urgency_score:number;priority_score:number;pace_trend:string;classification:SourceLabel;confidence:string;action:string;trajectory:SalesTrajectoryPoint[];
 }
-export interface SalesIntelligence {classification:SourceLabel;portfolio:{capacity:number;final_low:number;final_base:number;final_high:number;final_occupancy_pct:number;expected_new_tickets_7d:number;expected_new_tickets_14d:number;screenings_below_target:number;priority_screening_id:string|null};screenings:SalesIntelligenceScreening[];evidence:{final_demand:string;near_term:string;warning:string}}
-export interface MarketingPlanGeography {id:string;name:string;min_km:number;max_km:number;score:number;rank:number;classification:SourceLabel;confidence:string;recommended_share_pct:number;recommended_budget_cents:number;expected_incremental_tickets:number|null;performance:Performance;basis:string[]}
-export interface MarketingPlanScreening {screening_id:string;date:string;priority_score:number;risk:string;forecast_shortfall:number|null;target_tickets:number;predicted_tickets:number|null;recommended_budget_cents:number;expected_incremental_tickets:number|null}
-export interface MarketingPlanChannel {platform:'META'|'GOOGLE';classification:SourceLabel;performance:Performance;basis:string;recommended_budget_cents:number;recommended_share_pct:number}
+export interface SalesIntelligence {classification:SourceLabel;portfolio:{capacity:number;final_low:number;final_base:number;final_high:number;final_occupancy_pct:number;expected_new_tickets_7d:number|null;expected_new_tickets_14d:number|null;screenings_below_target:number;live_screenings:number;priority_screening_id:string|null};screenings:SalesIntelligenceScreening[];evidence:{final_demand:string;near_term:string;warning:string}}
+export interface MarketingPlanGeography {id:string;name:string;min_km:number;max_km:number;score:number;rank:number;classification:SourceLabel;confidence:string;ranking_mode:string;recommended_share_pct:number;recommended_budget_cents:number;expected_incremental_tickets:number|null;performance:Performance;traffic?:TrafficPerformance;basis:string[]}
+export interface MarketingPlanScreening {screening_id:string;date:string;priority_score:number;scenario_priority_score:number;risk:string;forecast_risk_score:number;action_urgency:string;action_urgency_score:number;sales_state:string;forecast_shortfall:number|null;target_tickets:number;predicted_tickets:number|null;recommended_budget_cents:number;recommended_now_budget_cents:number;expected_incremental_tickets:number|null}
+export interface MarketingPlanChannel {platform:'META'|'GOOGLE';classification:SourceLabel;allocation_mode:string;performance:Performance;basis:string;recommended_budget_cents:number;recommended_now_budget_cents:number;recommended_share_pct:number}
 export interface MarketingPlanAudience {segment:string;age?:string;message?:string;classification:SourceLabel;performance:Performance|null;basis:string}
-export interface MarketingPlan {classification:SourceLabel;advertising_budget_cents:number;recommendation:string;target_screening:MarketingPlanScreening|null;top_geography:MarketingPlanGeography|null;top_channel:MarketingPlanChannel|null;screenings:MarketingPlanScreening[];geographies:MarketingPlanGeography[];channels:MarketingPlanChannel[];audiences:MarketingPlanAudience[];warnings:string[]}
+export interface MarketingPlan {classification:SourceLabel;market_mode:string;advertising_budget_cents:number;recommended_now_budget_cents:number;recommendation:string;target_screening:MarketingPlanScreening|null;action_target_screening:MarketingPlanScreening|null;top_geography:MarketingPlanGeography|null;top_channel:MarketingPlanChannel|null;screenings:MarketingPlanScreening[];geographies:MarketingPlanGeography[];channels:MarketingPlanChannel[];audiences:MarketingPlanAudience[];warnings:string[]}
+
+export interface PriceSensitivityRow {ticket_price_cents:number;tickets_base:number;gross_revenue_base_cents:number;occupancy_base_pct:number}
+export interface PriceSensitivityCase {elasticity:number;winner_price_cents:number;winner_revenue_cents:number;baseline_revenue_cents:number;winner_gain_cents:number;rows:PriceSensitivityRow[]}
+export interface PriceSensitivity {status:'ROBUST_WINNER'|'NO_ROBUST_WINNER';robust_revenue_price_cents:number|null;scenario_winner_price_cents:number|null;elasticity_cases:PriceSensitivityCase[];minimum_winner_gain_cents:number;decision_threshold_cents:number;model_mae_tickets:number;message:string}
 
 export interface ScenarioResult {
   screening_ids:string[];ticket_price_cents:number;baseline_ticket_price_cents:number;attendance_target_pct:number;advertising_budget_cents:number;
   screenings:ScenarioScreening[];portfolio:ScenarioPortfolio;price_ladder:ScenarioLadderRow[];budget_ladder:BudgetLadderRow[];
-  highest_tested_price_meeting_target_cents:number|null;revenue_maximizing_tested_price_cents:number;
+  highest_tested_price_meeting_target_cents:number|null;revenue_maximizing_tested_price_cents:number;robust_revenue_price_cents:number|null;price_sensitivity:PriceSensitivity;price_decision:{status:string;scenario_winner_price_cents:number;robust_revenue_price_cents:number|null;message:string};
   evidence:{baseline_demand:ScenarioEvidenceItem;ticket_price:ScenarioEvidenceItem;price_response:ScenarioEvidenceItem;advertising_response:ScenarioEvidenceItem;economics:ScenarioEvidenceItem;cannibalization:ScenarioEvidenceItem};warnings:string[];
   sales_intelligence:SalesIntelligence;marketing_plan:MarketingPlan;
 }

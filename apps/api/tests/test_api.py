@@ -371,3 +371,74 @@ def test_planning_cpa_distributes_modeled_increment_without_inventing_extra_tota
         row["expected_incremental_tickets"] or 0 for row in data["marketing_plan"]["geographies"]
     )
     assert geography_increment == scenario_increment
+
+
+def test_presales_marketing_separates_what_if_budget_from_spend_today(client):
+    data = client.post("/v1/scenarios", json={"advertising_budget_cents": 50000}).json()
+    plan = data["marketing_plan"]
+    assert plan["advertising_budget_cents"] == 50000
+    assert plan["recommended_now_budget_cents"] == 0
+    assert sum(row["recommended_budget_cents"] for row in plan["screenings"]) == 50000
+    assert all(row["recommended_now_budget_cents"] == 0 for row in plan["screenings"])
+    assert all(row["action_urgency"] == "NONE" for row in plan["screenings"])
+    assert "Spend €0 today" in plan["recommendation"]
+
+
+def test_price_decision_is_uncertainty_aware(client):
+    data = client.post("/v1/scenarios", json={"ticket_price_cents": 1200}).json()
+    assert data["price_sensitivity"]["status"] in {"ROBUST_WINNER", "NO_ROBUST_WINNER"}
+    assert len(data["price_sensitivity"]["elasticity_cases"]) >= 2
+    assert data["price_sensitivity"]["decision_threshold_cents"] >= 0
+    assert data["price_decision"]["message"]
+    if data["price_decision"]["status"] == "NO_ROBUST_WINNER":
+        assert data["robust_revenue_price_cents"] is None
+
+
+def test_location_traffic_import_informs_market_ranking(client):
+    before = client.post("/v1/scenarios", json={"advertising_budget_cents": 10000}).json()
+    assert before["marketing_plan"]["market_mode"] in {"MARKET_TEST_PRIORITY", "SIGNAL_INFORMED", "EVIDENCE_RANKED"}
+    raw = (
+        "date,geography_id,sessions,ticket_clicks,source\n"
+        f"{date.today()},zone-a,100,50,ANALYTICS\n"
+    )
+    preview = client.post(
+        "/v1/imports/traffic",
+        data={"preview": "true", "replace": "false"},
+        files={"file": ("traffic.csv", raw, "text/csv")},
+    )
+    assert preview.status_code == 200, preview.text
+    imported = client.post(
+        "/v1/imports/traffic",
+        data={"preview": "false", "replace": "false"},
+        files={"file": ("traffic.csv", raw, "text/csv")},
+    )
+    assert imported.status_code == 200, imported.text
+    traffic = client.get("/v1/traffic").json()
+    zone_a = next(row for row in traffic if row["geography_id"] == "zone-a")
+    assert zone_a["sessions"] == 100
+    assert zone_a["ticket_clicks"] == 50
+    after = client.post("/v1/scenarios", json={"advertising_budget_cents": 10000}).json()
+    ranked_zone_a = next(row for row in after["marketing_plan"]["geographies"] if row["id"] == "zone-a")
+    assert ranked_zone_a["ranking_mode"] == "TRAFFIC_INFORMED"
+    assert ranked_zone_a["traffic"]["ticket_click_rate"] == 50.0
+
+
+def test_batch_ticket_snapshot_import(client):
+    stamp = datetime.now(timezone.utc) - timedelta(minutes=1)
+    raw = (
+        "screening_id,observed_at,tickets_sold,note\n"
+        f"resolution-2027-02-02,{stamp.isoformat()},3,\n"
+    )
+    preview = client.post(
+        "/v1/imports/ticket-sales",
+        data={"preview": "true", "replace": "false"},
+        files={"file": ("tickets.csv", raw, "text/csv")},
+    )
+    assert preview.status_code == 200, preview.text
+    imported = client.post(
+        "/v1/imports/ticket-sales",
+        data={"preview": "false", "replace": "false"},
+        files={"file": ("tickets.csv", raw, "text/csv")},
+    )
+    assert imported.status_code == 200, imported.text
+    assert imported.json()["imported"] == 1

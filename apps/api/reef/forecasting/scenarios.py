@@ -256,6 +256,90 @@ def _evaluate(
     return rows, _portfolio(rows, assumptions, payload.advertising_budget_cents), assumptions
 
 
+
+def _price_sensitivity(
+    screenings: list[dict],
+    payload: ScenarioInput,
+    rules: Rules,
+    ladder_prices: list[int],
+    dashboard: dict,
+) -> dict:
+    resolved = _resolve(payload, rules)
+    elasticities = sorted(
+        {
+            max(-5.0, min(-0.01, resolved.elasticity - resolved.elasticity_uncertainty)),
+            max(-5.0, min(-0.01, resolved.elasticity)),
+            max(-5.0, min(-0.01, resolved.elasticity + resolved.elasticity_uncertainty)),
+        }
+    )
+    cases = []
+    winners = []
+    for elasticity in elasticities:
+        local_payload = payload.model_copy(update={"price_elasticity": elasticity})
+        rows = []
+        for price in ladder_prices:
+            _, result, _ = _evaluate(screenings, local_payload, rules, price)
+            rows.append(
+                {
+                    "ticket_price_cents": price,
+                    "tickets_base": result["tickets_base"],
+                    "gross_revenue_base_cents": result["gross_revenue_base_cents"],
+                    "occupancy_base_pct": result["occupancy_base_pct"],
+                }
+            )
+        winner = max(rows, key=lambda row: row["gross_revenue_base_cents"])
+        baseline = next(
+            (row for row in rows if row["ticket_price_cents"] == rules.baseline_ticket_price_cents),
+            rows[0],
+        )
+        winners.append(winner["ticket_price_cents"])
+        cases.append(
+            {
+                "elasticity": round(elasticity, 3),
+                "winner_price_cents": winner["ticket_price_cents"],
+                "winner_revenue_cents": winner["gross_revenue_base_cents"],
+                "baseline_revenue_cents": baseline["gross_revenue_base_cents"],
+                "winner_gain_cents": winner["gross_revenue_base_cents"] - baseline["gross_revenue_base_cents"],
+                "rows": rows,
+            }
+        )
+
+    same_winner = len(set(winners)) == 1
+    candidate = winners[0] if same_winner and winners else None
+    min_gain = min((case["winner_gain_cents"] for case in cases), default=0) if candidate else 0
+    model_validation = dashboard.get("forecast_model", {}).get("validation", {}) or {}
+    mae_tickets = float(model_validation.get("mae_tickets") or 0.0)
+    baseline_case = next(
+        (row for row in cases[len(cases) // 2]["rows"] if row["ticket_price_cents"] == rules.baseline_ticket_price_cents),
+        None,
+    ) if cases else None
+    baseline_revenue = int(baseline_case["gross_revenue_base_cents"] if baseline_case else 0)
+    uncertainty_floor = max(
+        round(baseline_revenue * 0.05),
+        round(mae_tickets * (candidate or rules.baseline_ticket_price_cents)),
+    )
+    robust = candidate if candidate is not None and min_gain > uncertainty_floor else None
+    if robust is not None:
+        message = (
+            f"€{robust / 100:.2f} remains the revenue leader across the tested elasticity range and clears the evidence threshold."
+        )
+        status = "ROBUST_WINNER"
+    else:
+        message = (
+            "No robust revenue-winning price is identified yet. The apparent winner changes with elasticity or its revenue advantage is smaller than the current forecast-uncertainty threshold."
+        )
+        status = "NO_ROBUST_WINNER"
+    return {
+        "status": status,
+        "robust_revenue_price_cents": robust,
+        "scenario_winner_price_cents": candidate if same_winner else None,
+        "elasticity_cases": cases,
+        "minimum_winner_gain_cents": min_gain,
+        "decision_threshold_cents": uncertainty_floor,
+        "model_mae_tickets": mae_tickets,
+        "message": message,
+    }
+
 def scenario_analysis(dashboard: dict, payload: ScenarioInput, rules: Rules) -> dict:
     all_screenings = dashboard["screenings"]
     selected_ids = payload.screening_ids or [row["id"] for row in all_screenings]
@@ -293,6 +377,7 @@ def scenario_analysis(dashboard: dict, payload: ScenarioInput, rules: Rules) -> 
         else None
     )
     revenue_max = max(price_ladder, key=lambda row: row["gross_revenue_base_cents"])
+    price_sensitivity = _price_sensitivity(screenings, payload, rules, ladder_prices, dashboard)
 
     budget_ladder = []
     for budget in BUDGET_LADDER_CENTS:
@@ -312,6 +397,7 @@ def scenario_analysis(dashboard: dict, payload: ScenarioInput, rules: Rules) -> 
         "is not empirically identified.",
         "Price response uses a planning elasticity assumption and must not be interpreted "
         "as measured buyer behaviour.",
+        price_sensitivity["message"],
     ]
     if payload.advertising_budget_cents > 0 and assumptions.ad_cpa_cents is None:
         warnings.append(
@@ -352,6 +438,8 @@ def scenario_analysis(dashboard: dict, payload: ScenarioInput, rules: Rules) -> 
             "elasticity": assumptions.elasticity,
             "uncertainty": assumptions.elasticity_uncertainty,
             "formula": "demand = baseline_demand * (price / baseline_price) ^ elasticity",
+            "robustness_status": price_sensitivity["status"],
+            "decision_threshold_cents": price_sensitivity["decision_threshold_cents"],
         },
         "advertising_response": {
             "classification": "PLANNING ASSUMPTION" if assumptions.ad_cpa_cents else "UNKNOWN",
@@ -390,6 +478,14 @@ def scenario_analysis(dashboard: dict, payload: ScenarioInput, rules: Rules) -> 
         "budget_ladder": budget_ladder,
         "highest_tested_price_meeting_target_cents": highest_target_price,
         "revenue_maximizing_tested_price_cents": revenue_max["ticket_price_cents"],
+        "price_sensitivity": price_sensitivity,
+        "robust_revenue_price_cents": price_sensitivity["robust_revenue_price_cents"],
+        "price_decision": {
+            "status": price_sensitivity["status"],
+            "scenario_winner_price_cents": revenue_max["ticket_price_cents"],
+            "robust_revenue_price_cents": price_sensitivity["robust_revenue_price_cents"],
+            "message": price_sensitivity["message"],
+        },
         "evidence": evidence,
         "warnings": warnings,
     }

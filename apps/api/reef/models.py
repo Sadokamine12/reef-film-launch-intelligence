@@ -91,6 +91,22 @@ class Geography(Base):
     notes: Mapped[str] = mapped_column(Text)
 
 
+class TrafficMetric(Base):
+    __tablename__ = "traffic_metrics"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=uid)
+    project_id: Mapped[str] = mapped_column(ForeignKey("projects.id"), index=True)
+    geography_id: Mapped[str] = mapped_column(ForeignKey("geographies.id"), index=True)
+    date: Mapped[DateValue] = mapped_column(Date, index=True)
+    sessions: Mapped[int] = mapped_column(Integer)
+    ticket_clicks: Mapped[int] = mapped_column(Integer, default=0)
+    source: Mapped[str] = mapped_column(String(30), default="MANUAL")
+    imported_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    __table_args__ = (
+        UniqueConstraint("project_id", "geography_id", "date", "source"),
+        CheckConstraint("sessions >= 0 AND ticket_clicks >= 0"),
+    )
+
+
 class Creative(Base):
     __tablename__ = "creatives"
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=uid)

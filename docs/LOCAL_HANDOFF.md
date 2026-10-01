@@ -57,3 +57,13 @@ The decision layer now goes beyond fixed geography rules:
 - Ticket Sales now shows a forecast trajectory and expected new tickets over the next 7/14 days.
 
 After applying this phase, run the existing backend suite, `npm.cmd run typecheck`, `npm.cmd test`, and `npm.cmd run build` before committing.
+
+## Phase 5 — evidence ingestion and decision semantics
+
+- Pre-sales baseline risk is now separated from action urgency. Before confirmed sales opening, next-7/14-day selling is N/A and paid action urgency is zero even when final-demand risk is high.
+- Marketing output separates a what-if scenario allocation from the recommended paid spend today. Pre-sales/non-urgent screenings receive €0 current paid recommendation.
+- Geography output is labelled `MARKET_TEST_PRIORITY` until evidence exists. Campaign attribution, CTR, and location-level website ticket-click CSV imports can change the ranking; website clicks are intent signals, not purchases.
+- Ticket snapshots can be batch imported through `/v1/imports/ticket-sales` using `screening_id, observed_at, tickets_sold, note`. This supports repeated exports or an external collector without fabricating sales.
+- Location traffic can be imported through `/v1/imports/traffic` using `date, geography_id, sessions, ticket_clicks, source`.
+- Price analysis now includes elasticity sensitivity and only emits a robust revenue price when the same winner survives the tested elasticity range and clears a forecast-uncertainty threshold. A scenario-specific revenue leader is not automatically a recommendation.
+- Live ESO/Meta/Google/analytics API synchronization still requires provider credentials or a stable provider-specific adapter. The current implementation provides safe ingestion boundaries rather than pretending those connections are live.

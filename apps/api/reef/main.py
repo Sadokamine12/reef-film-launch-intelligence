@@ -16,7 +16,7 @@ from reef.campaigns.service import budget, metrics_for
 from reef.config import settings
 from reef.db import session
 from reef.forecasting.scenarios import scenario_analysis
-from reef.integrations.adapters import parse_campaign_csv
+from reef.integrations.adapters import parse_campaign_csv, parse_ticket_sales_csv, parse_traffic_csv
 from reef.intelligence.engine import build_marketing_plan
 from reef.models import (
     AuditEvent,
@@ -30,6 +30,7 @@ from reef.models import (
     Project,
     Screening,
     Snapshot,
+    TrafficMetric,
     UserAccount,
 )
 from reef.reports.service import REPORTS, report
@@ -252,6 +253,79 @@ def add_snapshot(payload: SnapshotInput, db: Session = Depends(session), user: U
     return serialized(row)
 
 
+@app.post("/v1/imports/ticket-sales")
+def import_ticket_sales(
+    preview: bool = Form(True),
+    replace: bool = Form(False),
+    file: UploadFile = File(...),
+    db: Session = Depends(session),
+    user: User = Depends(editor),
+):
+    try:
+        rows = parse_ticket_sales_csv(file.file.read(2_000_001))
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from None
+    screenings = {
+        row.id: row
+        for row in db.scalars(select(Screening).where(Screening.project_id == PROJECT_ID))
+    }
+    unknown = sorted({row.screening_id for row in rows if row.screening_id not in screenings})
+    if unknown:
+        raise HTTPException(422, f"Unknown screening_id: {', '.join(unknown)}")
+    for row in rows:
+        if row.tickets_sold > screenings[row.screening_id].capacity:
+            raise HTTPException(422, f"Ticket count exceeds capacity for {row.screening_id}")
+    # Validate decreases within the uploaded series. A note is required for refunds/corrections.
+    by_screening: dict[str, list] = {}
+    for row in rows:
+        by_screening.setdefault(row.screening_id, []).append(row)
+    for screening_id, values in by_screening.items():
+        values.sort(key=lambda item: item.observed_at)
+        previous = db.scalar(
+            select(Snapshot)
+            .where(Snapshot.screening_id == screening_id, Snapshot.observed_at < values[0].observed_at)
+            .order_by(Snapshot.observed_at.desc())
+        )
+        previous_count = previous.tickets_sold if previous else None
+        for row in values:
+            if previous_count is not None and row.tickets_sold < previous_count and not row.note.strip():
+                raise HTTPException(422, f"Lower ticket count for {screening_id} requires a note")
+            previous_count = row.tickets_sold
+    existing = {
+        (row.screening_id, row.observed_at): row
+        for row in db.scalars(select(Snapshot).where(Snapshot.screening_id.in_(list(screenings))))
+    }
+    conflicts = []
+    for row in rows:
+        current = existing.get((row.screening_id, row.observed_at))
+        if current and (current.tickets_sold != row.tickets_sold or current.note != row.note):
+            conflicts.append(f"{row.screening_id}:{row.observed_at.isoformat()}")
+    if preview:
+        return {"rows": [row.model_dump(mode="json") for row in rows], "conflicts": conflicts, "source_label": "OBSERVED"}
+    if conflicts and not replace:
+        raise HTTPException(409, "Existing ticket snapshots differ. Preview first and explicitly enable replacement.")
+    for row in rows:
+        current = existing.get((row.screening_id, row.observed_at))
+        if current:
+            if replace:
+                current.tickets_sold = row.tickets_sold
+                current.note = row.note
+                current.source = "csv"
+                current.source_label = "OBSERVED"
+        else:
+            db.add(
+                Snapshot(
+                    **row.model_dump(),
+                    source_label="OBSERVED",
+                    source="csv",
+                    created_by=user.email,
+                )
+            )
+    audit(db, user, "ticket-observations.imported", PROJECT_ID, {"rows": len(rows), "replace": replace})
+    db.commit()
+    return {"imported": len(rows), "source_label": "OBSERVED"}
+
+
 @app.put("/v1/screenings/{screening_id}")
 def update_screening(
     screening_id: str, payload: ScreeningUpdate, db: Session = Depends(session), user: User = Depends(editor)
@@ -394,6 +468,106 @@ def import_campaign(
     return {"imported": len(rows), "metrics": metrics_for(db, campaign.id)}
 
 
+@app.post("/v1/imports/traffic")
+def import_traffic(
+    preview: bool = Form(True),
+    replace: bool = Form(False),
+    file: UploadFile = File(...),
+    db: Session = Depends(session),
+    user: User = Depends(editor),
+):
+    try:
+        rows = parse_traffic_csv(file.file.read(2_000_001))
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from None
+    valid_geographies = {
+        g.id for g in db.scalars(select(Geography).where(Geography.project_id == PROJECT_ID))
+    }
+    unknown = sorted({row.geography_id for row in rows if row.geography_id not in valid_geographies})
+    if unknown:
+        raise HTTPException(422, f"Unknown geography_id: {', '.join(unknown)}")
+    existing = {
+        (row.geography_id, row.date, row.source): row
+        for row in db.scalars(select(TrafficMetric).where(TrafficMetric.project_id == PROJECT_ID))
+    }
+    conflicts = []
+    for row in rows:
+        current = existing.get((row.geography_id, row.date, row.source))
+        if current and (current.sessions != row.sessions or current.ticket_clicks != row.ticket_clicks):
+            conflicts.append(f"{row.date}:{row.geography_id}:{row.source}")
+    if preview:
+        return {
+            "rows": [row.model_dump(mode="json") for row in rows],
+            "conflicts": conflicts,
+            "sessions": sum(row.sessions for row in rows),
+            "ticket_clicks": sum(row.ticket_clicks for row in rows),
+            "source_label": "OBSERVED",
+        }
+    if conflicts and not replace:
+        raise HTTPException(409, "Existing traffic rows differ. Preview first and explicitly enable replacement.")
+    project(db, lock=True)
+    now = datetime.now(timezone.utc)
+    for row in rows:
+        key = (row.geography_id, row.date, row.source)
+        current = existing.get(key)
+        if current:
+            if replace:
+                current.sessions = row.sessions
+                current.ticket_clicks = row.ticket_clicks
+                current.imported_at = now
+        else:
+            db.add(
+                TrafficMetric(
+                    project_id=PROJECT_ID,
+                    geography_id=row.geography_id,
+                    date=row.date,
+                    sessions=row.sessions,
+                    ticket_clicks=row.ticket_clicks,
+                    source=row.source,
+                    imported_at=now,
+                )
+            )
+    audit(
+        db,
+        user,
+        "traffic-metrics.imported",
+        PROJECT_ID,
+        {"rows": len(rows), "replace": replace},
+    )
+    db.commit()
+    return {"imported": len(rows), "sessions": sum(row.sessions for row in rows), "ticket_clicks": sum(row.ticket_clicks for row in rows)}
+
+
+def traffic_performance(db: Session, geography_id: str) -> dict:
+    rows = list(
+        db.scalars(
+            select(TrafficMetric).where(
+                TrafficMetric.project_id == PROJECT_ID, TrafficMetric.geography_id == geography_id
+            )
+        )
+    )
+    sessions = sum(row.sessions for row in rows)
+    clicks = sum(row.ticket_clicks for row in rows)
+    return {
+        "sessions": sessions,
+        "ticket_clicks": clicks,
+        "ticket_click_rate": round(clicks / sessions * 100, 2) if sessions else None,
+        "observations": len(rows),
+        "source_label": "OBSERVED" if rows else "UNKNOWN",
+        "last_imported_at": max((row.imported_at.isoformat() for row in rows), default=None),
+    }
+
+
+@app.get("/v1/traffic")
+def traffic(db: Session = Depends(session), user: User = Depends(current_user)):
+    return [
+        {"geography_id": g.id, "name": g.name, **traffic_performance(db, g.id)}
+        for g in db.scalars(
+            select(Geography).where(Geography.project_id == PROJECT_ID).order_by(Geography.min_km)
+        )
+    ]
+
+
 @app.get("/v1/creatives")
 def creatives(db: Session = Depends(session), user: User = Depends(current_user)):
     return [
@@ -452,7 +626,11 @@ def aggregate_metrics(db, field, key):
 @app.get("/v1/geography")
 def geography(db: Session = Depends(session), user: User = Depends(current_user)):
     return [
-        {**serialized(g), "performance": aggregate_metrics(db, "geography_id", g.id)}
+        {
+            **serialized(g),
+            "performance": aggregate_metrics(db, "geography_id", g.id),
+            "traffic": traffic_performance(db, g.id),
+        }
         for g in db.scalars(
             select(Geography).where(Geography.project_id == PROJECT_ID).order_by(Geography.min_km)
         )
@@ -464,20 +642,24 @@ def integrations(db: Session = Depends(session), user: User = Depends(current_us
     return [
         {
             "provider": p,
-            "status": "READY" if p == "Manual CSV" else "NOT CONNECTED",
+            "status": (
+                "READY" if p == "Manual CSV"
+                else "CSV READY" if p in {"Meta Ads", "Google Ads", "Website analytics", "ESO ticket inventory"}
+                else "NOT CONNECTED"
+            ),
             "label": "PLANNING ASSUMPTION",
             "last_sync": None,
             "detail": detail,
         }
         for p, detail in [
-            ("ESO ticket inventory", "Add official booking links; manual sales observations are supported."),
+            ("ESO ticket inventory", "Manual entry and batch snapshot CSV import are ready. A live ESO collector still requires a stable public booking-page/API adapter."),
             ("Meta Ads", "CSV import ready. API credentials are not connected."),
             ("Google Ads", "CSV import ready. API credentials are not connected."),
             (
                 "Website analytics",
-                "Provider interface prepared; event and ticket attribution schema pending.",
+                "Location-level CSV import is ready via /v1/imports/traffic; sessions and ticket-click signals can inform market-test ranking.",
             ),
-            ("Manual CSV", "Campaign import available. Imported rows are labeled OBSERVED."),
+            ("Manual CSV", "Campaign and location-traffic imports are available. Imported rows are labeled OBSERVED."),
         ]
     ]
 
